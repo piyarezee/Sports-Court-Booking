@@ -1,6 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
+const QRCode = require('qrcode'); // Added QR Code package
 const sheetsService = require('../services/sheetsService');
 const driveService = require('../services/driveService');
 const emailService = require('../services/emailService');
@@ -78,8 +79,11 @@ router.post('/', upload.single('paymentScreenshot'), async (req, res) => {
       paymentUrl = `/uploads/${req.file.filename}`;
     }
 
-    // Cleanup local file after Drive upload (optional keep for now)
-    // driveService.cleanupLocalFile(req.file.path);
+    // Generate Booking ID (e.g., SCB-1718482901)
+    const bookingId = `SCB-${Date.now()}`;
+    
+    // Generate QR Code as Data URL (contains Booking ID)
+    const qrCodeDataUrl = await QRCode.toDataURL(bookingId, { width: 200 });
 
     const slotEnd = `${String(Number(slotStart.split(':')[0]) + 1).padStart(2, '0')}:00`;
 
@@ -90,8 +94,10 @@ router.post('/', upload.single('paymentScreenshot'), async (req, res) => {
       email
     });
 
-    // Create booking
+    // Create booking (passing bookingId and qrCode)
     const booking = await sheetsService.createBooking({
+      bookingId,
+      qrCode: qrCodeDataUrl,
       courtId,
       courtName: court.name,
       date,
@@ -104,7 +110,7 @@ router.post('/', upload.single('paymentScreenshot'), async (req, res) => {
       paymentScreenshot: paymentUrl
     });
 
-    // Send email (don't fail booking if email fails)
+    // Send email (passing bookingId and qrCode)
     try {
       await emailService.sendBookingSubmittedEmail({
         to: email,
@@ -113,7 +119,8 @@ router.post('/', upload.single('paymentScreenshot'), async (req, res) => {
         date,
         slot: `${slotStart} - ${slotEnd}`,
         amount: court.pricePerHour,
-        bookingId: booking.id
+        bookingId: bookingId,
+        qrCode: qrCodeDataUrl
       });
     } catch (emailErr) {
       console.error('Email send failed:', emailErr.message);

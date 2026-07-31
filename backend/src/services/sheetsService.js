@@ -1,117 +1,9 @@
-const { getSheetsClient } = require('../config/google');
-require('dotenv').config();
-
-const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
-
-// Sheet names
-const SHEETS = {
-  CUSTOMERS: 'Customers',
-  COURTS: 'Courts',
-  BOOKINGS: 'Bookings',
-  SETTINGS: 'Settings'
-};
-
-/**
- * Read all rows from a sheet (assuming first row is header)
- */
-async function getSheetData(sheetName) {
-  const sheets = getSheetsClient();
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${sheetName}!A:Z`
-  });
-
-  const rows = response.data.values || [];
-  if (rows.length === 0) return [];
-
-  const headers = rows[0].map(h => h.trim().toLowerCase().replace(/\s+/g, '_'));
-  return rows.slice(1).map(row => {
-    const obj = {};
-    headers.forEach((header, i) => {
-      obj[header] = row[i] || '';
-    });
-    return obj;
-  });
-}
-
-/**
- * Append a row to a sheet
- */
-async function appendRow(sheetName, values) {
-  const sheets = getSheetsClient();
-  await sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${sheetName}!A:Z`,
-    valueInputOption: 'USER_ENTERED',
-    requestBody: {
-      values: [values]
-    }
-  });
-}
-
-/**
- * Update a specific row (by row number, 1-indexed including header)
- */
-async function updateRow(sheetName, rowNumber, values) {
-  const sheets = getSheetsClient();
-  const range = `${sheetName}!A${rowNumber}:Z${rowNumber}`;
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range,
-    valueInputOption: 'USER_ENTERED',
-    requestBody: {
-      values: [values]
-    }
-  });
-}
-
-/**
- * Find row number by a column value (returns 1-indexed row including header, or null)
- */
-async function findRowNumber(sheetName, columnIndex, value) {
-  const sheets = getSheetsClient();
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${sheetName}!A:Z`
-  });
-
-  const rows = response.data.values || [];
-  for (let i = 1; i < rows.length; i++) {
-    if ((rows[i][columnIndex] || '').toString() === value.toString()) {
-      return i + 1; // 1-indexed
-    }
-  }
-  return null;
-}
-
-// ========== COURTS ==========
-async function getCourts() {
-  const data = await getSheetData(SHEETS.COURTS);
-  return data
-    .filter(c => c.is_active !== 'FALSE' && c.is_active !== 'false' && c.is_active !== '0')
-    .map(c => ({
-      id: c.id,
-      name: c.name,
-      type: c.type,
-      location: c.location,
-      pricePerHour: Number(c.price_per_hour) || 0,
-      image: c.image || '',
-      description: c.description || '',
-      amenities: c.amenities ? c.amenities.split(',').map(a => a.trim()) : [],
-      isActive: true
-    }));
-}
-
-async function getCourtById(id) {
-  const courts = await getCourts();
-  return courts.find(c => c.id === id) || null;
-}
-
 // ========== BOOKINGS ==========
 async function getBookings() {
   const data = await getSheetData(SHEETS.BOOKINGS);
   return data.map(b => ({
     id: b.id,
+    bookingId: b.booking_id || b.id, // Support new bookingId
     courtId: b.court_id,
     courtName: b.court_name,
     date: b.date,
@@ -122,9 +14,10 @@ async function getBookings() {
     email: b.email,
     amount: Number(b.amount) || 0,
     paymentScreenshot: b.payment_screenshot || '',
-    status: b.status || 'pending', // pending | approved | rejected
+    status: b.status || 'pending',
     createdAt: b.created_at,
-    notes: b.notes || ''
+    notes: b.notes || '',
+    qrCode: b.qr_code || ''
   }));
 }
 
@@ -136,11 +29,12 @@ async function getBookingsByDateAndCourt(courtId, date) {
 }
 
 async function createBooking(booking) {
-  const id = `BK${Date.now()}`;
+  const id = `BK${Date.now()}`; // Internal row ID
   const createdAt = new Date().toISOString();
 
+  // Append row with new bookingId and qrCode columns
   await appendRow(SHEETS.BOOKINGS, [
-    id,
+    booking.bookingId, // Booking ID (e.g. SCB-12345)
     booking.courtId,
     booking.courtName,
     booking.date,
@@ -153,71 +47,9 @@ async function createBooking(booking) {
     booking.paymentScreenshot || '',
     'pending',
     createdAt,
-    booking.notes || ''
+    booking.notes || '',
+    booking.qrCode || '' // QR Code Data URL
   ]);
 
   return { id, ...booking, status: 'pending', createdAt };
 }
-
-async function updateBookingStatus(bookingId, status, notes = '') {
-  const rowNum = await findRowNumber(SHEETS.BOOKINGS, 0, bookingId); // id is column A (index 0)
-  if (!rowNum) throw new Error('Booking not found');
-
-  // Get current row to preserve other values
-  const sheets = getSheetsClient();
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEETS.BOOKINGS}!A${rowNum}:N${rowNum}`
-  });
-
-  const row = response.data.values[0];
-  row[11] = status; // status column (L = index 11)
-  if (notes) row[13] = notes;
-
-  await updateRow(SHEETS.BOOKINGS, rowNum, row);
-  return { id: bookingId, status, notes };
-}
-
-// ========== CUSTOMERS ==========
-async function findCustomerByMobile(mobile) {
-  const data = await getSheetData(SHEETS.CUSTOMERS);
-  return data.find(c => c.mobile === mobile) || null;
-}
-
-async function upsertCustomer({ name, mobile, email }) {
-  const existing = await findCustomerByMobile(mobile);
-  if (existing) {
-    // Could update name/email if changed, but for V1 just return existing
-    return existing;
-  }
-
-  const id = `CU${Date.now()}`;
-  const createdAt = new Date().toISOString();
-  await appendRow(SHEETS.CUSTOMERS, [id, name, mobile, email, createdAt]);
-  return { id, name, mobile, email, created_at: createdAt };
-}
-
-// ========== SETTINGS ==========
-async function getSettings() {
-  const data = await getSheetData(SHEETS.SETTINGS);
-  const settings = {};
-  data.forEach(row => {
-    if (row.key) settings[row.key] = row.value;
-  });
-  return settings;
-}
-
-module.exports = {
-  SHEETS,
-  getCourts,
-  getCourtById,
-  getBookings,
-  getBookingsByDateAndCourt,
-  createBooking,
-  updateBookingStatus,
-  findCustomerByMobile,
-  upsertCustomer,
-  getSettings,
-  getSheetData,
-  appendRow
-};

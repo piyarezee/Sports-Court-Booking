@@ -10,6 +10,8 @@ import AdminBookings from './pages/admin/Bookings'
 import WalkIn from './pages/WalkIn'
 import Payments from './pages/Payments'
 import ContactMessages from './pages/ContactMessages'
+import StaffLogin from './pages/staff/Login'
+import StaffDashboard from './pages/staff/Dashboard'
 
 function App() {
   return (
@@ -26,11 +28,13 @@ function App() {
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/bookings" element={<AdminBookings />} />
-        
-        {/* New Admin Routes */}
         <Route path="/admin/walk-in" element={<WalkIn />} />
         <Route path="/admin/payments" element={<Payments />} />
         <Route path="/admin/contact" element={<ContactMessages />} />
+
+        {/* Staff routes */}
+        <Route path="/staff/login" element={<StaffLogin />} />
+        <Route path="/staff/dashboard" element={<StaffDashboard />} />
       </Routes>
     </div>
   )

@@ -26,6 +26,39 @@ router.post('/login', (req, res) => {
 
 // All routes below require admin auth
 router.use(adminAuth);
+// POST /api/staff/login
+router.post('/staff/login', (req, res) => {
+  const { password } = req.body;
+
+  // Staff password (aap ise .env mein STAFF_PASSWORD set kar sakte hain)
+  const staffPassword = process.env.STAFF_PASSWORD || 'staff123';
+
+  if (password === staffPassword) {
+    const token = Buffer.from(`staff:${password}`).toString('base64');
+    return res.json({
+      success: true,
+      token,
+      role: 'staff'
+    });
+  }
+
+  return res.status(401).json({ success: false, error: 'Invalid staff password' });
+});
+
+// GET /api/staff/today-bookings (Staff auth middleware reuse karenge)
+router.get('/staff/today-bookings', adminAuth, async (req, res) => {
+  try {
+    const bookings = await sheetsService.getBookings();
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    const todayBookings = bookings.filter(b => b.date === today && b.status === 'approved');
+    
+    res.json({ success: true, data: todayBookings });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 // GET /api/admin/dashboard
 router.get('/dashboard', async (req, res) => {

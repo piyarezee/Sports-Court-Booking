@@ -21,20 +21,27 @@ export default function SlotSelection() {
 
   useEffect(() => {
     async function loadData() {
-      setLoading(true)
+      setLoading(true);
+      
+      // 1. Court Load Karo (8 second timeout ke sath)
       try {
         const courtData = await getCourt(courtId)
         setCourt(courtData)
-        
-        // Simple API call
-        const response = await axios.get(`${API}/bookings`)
-        const allBookings = response.data.data || []
-        
+      } catch {
+        // Agar backend so raha hai, toh mock data dikhao taake page load ho
+        setCourt(mockCourts.find(c => c.id === courtId) || null)
+      }
+
+      // 2. Booked Slots Fetch Karo (8 second timeout ke sath)
+      try {
+        const response = await axios.get(`${API}/bookings`, { timeout: 8000 })
+        const allBookings = response.data?.data || []
         const filteredBookings = allBookings.filter(b => b.courtId === courtId && b.date === date)
         setBookedSlots(filteredBookings.map(b => b.slotStart))
       } catch (err) {
-        console.error("Error loading slots:", err)
-        setCourt(mockCourts.find(c => c.id === courtId) || null)
+        // Agar backend so raha hai, toh koi slot booked mat dikhao
+        console.log("Backend sleeping, showing all slots available.")
+        setBookedSlots([])
       } finally {
         setLoading(false)
       }

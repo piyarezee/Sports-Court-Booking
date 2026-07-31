@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Html5QrcodeScanner } from 'html5-qrcode'
+import { Html5Qrcode } from 'html5-qrcode' // Changed to Html5Qrcode for better control
 import axios from 'axios'
 
 const API = import.meta.env.VITE_API_URL || '/api'
@@ -11,14 +11,15 @@ export default function StaffDashboard() {
   const [bookings, setBookings] = useState([])
   const [scanResult, setScanResult] = useState(null)
   const [error, setError] = useState('')
+  const scannerRef = useRef(null)
 
+  // 1. Fetch Bookings
   useEffect(() => {
     if (!token) {
       navigate('/staff/login')
       return
     }
     
-    // Fetch today's bookings
     const fetchBookings = async () => {
       try {
         const res = await axios.get(`${API}/admin/staff/today-bookings`, {
@@ -30,14 +31,21 @@ export default function StaffDashboard() {
       }
     }
     fetchBookings()
+  }, [token, navigate])
 
-    // Initialize QR Scanner
-    const scanner = new Html5QrcodeScanner('qr-reader', {
-      qrbox: { width: 250, height: 250 },
-      fps: 10,
-    }, false)
+  // 2. Initialize QR Scanner
+  useEffect(() => {
+    if (scanResult) return // Stop scanner if result is shown
 
-    scanner.render(
+    const scanner = new Html5Qrcode("qr-reader")
+    scannerRef.current = scanner
+
+    scanner.start(
+      { facingMode: "environment" }, // Use back camera
+      {
+        fps: 10,
+        qrbox: { width: 250, height: 250 }
+      },
       (decodedText) => {
         // On Successful Scan
         const foundBooking = bookings.find(b => b.bookingId === decodedText)
@@ -46,16 +54,22 @@ export default function StaffDashboard() {
         } else {
           setScanResult({ status: 'error', message: `Invalid QR: ${decodedText}` })
         }
-        scanner.clear()
+        scanner.stop().catch(() => {})
       },
       (err) => {
-        // Ignore scan errors (they fire constantly)
+        // Ignore scan errors
       }
-    )
+    ).catch(err => {
+      setError("Failed to start camera. Please check permissions.")
+    })
 
-    // Cleanup scanner on unmount
-    return () => scanner.clear().catch(() => {})
-  }, [token, navigate])
+    // Cleanup on unmount
+    return () => {
+      if (scannerRef.current && scannerRef.current.isScanning) {
+        scannerRef.current.stop().catch(() => {})
+      }
+    }
+  }, [scanResult, bookings])
 
   const handleLogout = () => {
     localStorage.removeItem('staffToken')
@@ -64,7 +78,6 @@ export default function StaffDashboard() {
 
   const rescan = () => {
     setScanResult(null)
-    window.location.reload() // Easiest way to restart scanner
   }
 
   return (
@@ -75,12 +88,13 @@ export default function StaffDashboard() {
       </header>
 
       <main className="max-w-md mx-auto p-4">
-        {error && <p className="text-red-400 text-center mb-4">{error}</p>}
+        {error && <p className="text-red-400 text-center mb-4 bg-red-900/20 p-2 rounded">{error}</p>}
 
         {/* QR Scanner Area */}
         {!scanResult && (
-          <div className="bg-white rounded-2xl p-4 mb-6">
-            <div id="qr-reader" className="w-full overflow-hidden rounded-xl"></div>
+          <div className="bg-white rounded-2xl p-4 mb-6 overflow-hidden">
+            <div id="qr-reader" className="w-full rounded-xl overflow-hidden"></div>
+            <p className="text-center text-gray-500 text-sm mt-2">Point camera at the QR code</p>
           </div>
         )}
 

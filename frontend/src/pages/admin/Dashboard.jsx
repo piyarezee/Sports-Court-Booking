@@ -78,6 +78,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {/* Stats Grid (Added Total Revenue) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
             <p className="text-sm text-gray-500">Total Bookings</p>
@@ -91,13 +92,14 @@ export default function AdminDashboard() {
             <p className="text-sm text-green-600">Approved</p>
             <p className="text-3xl font-bold text-green-600 mt-1">{data?.approved || 0}</p>
           </div>
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-            <p className="text-sm text-red-600">Rejected</p>
-            <p className="text-3xl font-bold text-red-600 mt-1">{data?.rejected || 0}</p>
+          <div className="bg-primary-50 rounded-2xl p-5 shadow-sm border border-primary-100">
+            <p className="text-sm text-primary-600">Total Revenue</p>
+            <p className="text-3xl font-bold text-primary-600 mt-1">Rs. {data?.totalRevenue || 0}</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        {/* Navigation Cards (Added Walk-in, Payments, Contact) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-8">
           <Link
             to="/admin/bookings"
             className="bg-primary-600 hover:bg-primary-700 text-white rounded-2xl p-5 flex items-center justify-between transition"
@@ -108,6 +110,40 @@ export default function AdminDashboard() {
             </div>
             <span className="text-2xl">→</span>
           </Link>
+          
+          <Link
+            to="/admin/walk-in"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl p-5 flex items-center justify-between transition"
+          >
+            <div>
+              <p className="font-semibold">Walk-in Entry</p>
+              <p className="text-sm text-indigo-100 mt-0.5">Add Cash Booking</p>
+            </div>
+            <span className="text-2xl">+</span>
+          </Link>
+
+          <Link
+            to="/admin/payments"
+            className="bg-green-600 hover:bg-green-700 text-white rounded-2xl p-5 flex items-center justify-between transition"
+          >
+            <div>
+              <p className="font-semibold">Payments</p>
+              <p className="text-sm text-green-100 mt-0.5">View Transactions</p>
+            </div>
+            <span className="text-2xl">₹</span>
+          </Link>
+
+          <Link
+            to="/admin/contact"
+            className="bg-orange-500 hover:bg-orange-600 text-white rounded-2xl p-5 flex items-center justify-between transition"
+          >
+            <div>
+              <p className="font-semibold">Messages</p>
+              <p className="text-sm text-orange-100 mt-0.5">Contact Queries</p>
+            </div>
+            <span className="text-2xl">✉</span>
+          </Link>
+
           <Link
             to="/admin/bookings?status=pending"
             className="bg-amber-500 hover:bg-amber-600 text-white rounded-2xl p-5 flex items-center justify-between transition"
@@ -116,20 +152,22 @@ export default function AdminDashboard() {
               <p className="font-semibold">Pending Only</p>
               <p className="text-sm text-amber-100 mt-0.5">{data?.pending || 0} waiting</p>
             </div>
-            <span className="text-2xl">→</span>
+            <span className="text-2xl">⏳</span>
           </Link>
+          
           <Link
             to="/"
             className="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-2xl p-5 flex items-center justify-between transition"
           >
             <div>
-              <p className="font-semibold">View Customer Site</p>
+              <p className="font-semibold">Customer Site</p>
               <p className="text-sm text-gray-500 mt-0.5">Open booking page</p>
             </div>
-            <span className="text-2xl">→</span>
+            <span className="text-2xl">🌐</span>
           </Link>
         </div>
 
+        {/* Recent Bookings Table */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
             <h2 className="font-semibold text-gray-900">Recent Bookings</h2>

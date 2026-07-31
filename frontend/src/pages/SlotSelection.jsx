@@ -1,8 +1,11 @@
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import axios from 'axios'
 import Header from '../components/Header'
-import { getCourt, getBookingsByDate } from '../services/api'
+import { getCourt } from '../services/api'
 import { courts as mockCourts } from '../data/mockData'
+
+const API = import.meta.env.VITE_API_URL || '/api'
 
 export default function SlotSelection() {
   const [searchParams] = useSearchParams()
@@ -22,8 +25,9 @@ export default function SlotSelection() {
         const courtData = await getCourt(courtId)
         setCourt(courtData)
         
-        const bookingsData = await getBookingsByDate(courtId, date)
-        setBookedSlots(bookingsData.map(b => b.slotStart))
+        // Fetch booked slots for this date and court
+        const bookingsRes = await axios.get(`${API}/bookings?courtId=${courtId}&date=${date}`)
+        setBookedSlots(bookingsRes.data.data.map(b => b.slotStart))
       } catch {
         setCourt(mockCourts.find(c => c.id === courtId) || null)
       } finally {

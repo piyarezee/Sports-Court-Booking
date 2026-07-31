@@ -1,9 +1,12 @@
 const express = require('express');
-const adminAuth = require('../middleware/adminAuth');
 const sheetsService = require('../services/sheetsService');
 const emailService = require('../services/emailService');
 
 const router = express.Router();
+
+// ==========================================
+// PUBLIC ROUTES (No Auth Required)
+// ==========================================
 
 // POST /api/admin/login
 router.post('/login', (req, res) => {
@@ -24,13 +27,9 @@ router.post('/login', (req, res) => {
   return res.status(401).json({ success: false, error: 'Invalid email or password' });
 });
 
-// All routes below require admin auth
-router.use(adminAuth);
-// POST /api/staff/login
+// POST /api/admin/staff/login
 router.post('/staff/login', (req, res) => {
   const { password } = req.body;
-
-  // Staff password (aap ise .env mein STAFF_PASSWORD set kar sakte hain)
   const staffPassword = process.env.STAFF_PASSWORD || 'staff123';
 
   if (password === staffPassword) {
@@ -45,20 +44,15 @@ router.post('/staff/login', (req, res) => {
   return res.status(401).json({ success: false, error: 'Invalid staff password' });
 });
 
-// GET /api/staff/today-bookings (Staff auth middleware reuse karenge)
-router.get('/staff/today-bookings', adminAuth, async (req, res) => {
-  try {
-    const bookings = await sheetsService.getBookings();
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    
-    const todayBookings = bookings.filter(b => b.date === today && b.status === 'approved');
-    
-    res.json({ success: true, data: todayBookings });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
+// ==========================================
+// ADMIN AUTH MIDDLEWARE
+// ==========================================
+const adminAuth = require('../middleware/adminAuth');
+router.use(adminAuth);
+
+// ==========================================
+// PROTECTED ADMIN ROUTES
+// ==========================================
 
 // GET /api/admin/dashboard
 router.get('/dashboard', async (req, res) => {
@@ -162,9 +156,7 @@ router.get('/courts', async (req, res) => {
   }
 });
 
-// ===== NEW ROUTES: WALK-INS, PAYMENTS, CONTACT =====
-
-// POST /api/admin/walk-ins (Staff/Admin creates walk-in cash booking)
+// POST /api/admin/walk-ins
 router.post('/walk-ins', async (req, res) => {
   try {
     const { customerName, mobile, courtName, date, time, amount } = req.body;
@@ -195,6 +187,42 @@ router.get('/contact', async (req, res) => {
   try {
     const data = await sheetsService.getSheetData(sheetsService.SHEETS.CONTACT);
     res.json({ success: true, data });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ==========================================
+// STAFF PROTECTED ROUTE
+// ==========================================
+
+// Custom Staff Auth Middleware
+const staffAuth = (req, res, next) => {
+  const authHeader = req.header('Authorization');
+  if (!authHeader) return res.status(401).json({ error: 'No token provided' });
+  
+  const token = authHeader.replace('Bearer ', '');
+  const decoded = Buffer.from(token, 'base64').toString('utf8');
+  const [role, password] = decoded.split(':');
+  
+  const staffPassword = process.env.STAFF_PASSWORD || 'staff123';
+  if (role === 'staff' && password === staffPassword) {
+    next();
+  } else {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+};
+
+// GET /api/admin/staff/today-bookings
+router.get('/staff/today-bookings', staffAuth, async (req, res) => {
+  try {
+    const bookings = await sheetsService.getBookings();
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    const todayBookings = bookings.filter(b => b.date === today && b.status === 'approved');
+    
+    res.json({ success: true, data: todayBookings });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: err.message });

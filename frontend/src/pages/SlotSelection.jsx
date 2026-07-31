@@ -21,29 +21,28 @@ export default function SlotSelection() {
 
   useEffect(() => {
     async function loadData() {
+      setLoading(true)
       try {
-        // Dono data parallel fetch kar rahe hain taake time bachay
-        const [courtRes, bookingsRes] = await Promise.all([
-          getCourt(courtId),
-          axios.get(`${API}/bookings`)
-        ]);
+        const courtData = await getCourt(courtId)
+        setCourt(courtData)
         
-        setCourt(courtRes);
+        // Simple API call
+        const response = await axios.get(`${API}/bookings`)
+        const allBookings = response.data.data || []
         
-        // Frontend par filter kar rahe hain taake backend par load na paaye
-        const filteredBookings = bookingsRes.data.data.filter(
-          b => b.courtId === courtId && b.date === date
-        );
-        setBookedSlots(filteredBookings.map(b => b.slotStart));
-        
-      } catch {
+        const filteredBookings = allBookings.filter(b => b.courtId === courtId && b.date === date)
+        setBookedSlots(filteredBookings.map(b => b.slotStart))
+      } catch (err) {
+        console.error("Error loading slots:", err)
         setCourt(mockCourts.find(c => c.id === courtId) || null)
       } finally {
         setLoading(false)
       }
     }
+    
     if (courtId && date) loadData()
   }, [courtId, date])
+
   // Generate slots from 10:00 to 22:00
   const allSlots = Array.from({ length: 13 }, (_, i) => `${String(i + 10).padStart(2, '0')}:00`)
 
@@ -55,7 +54,10 @@ export default function SlotSelection() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-500">Loading slots...</p>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600 mx-auto mb-3"></div>
+          <p className="text-gray-500">Loading slots...</p>
+        </div>
       </div>
     )
   }

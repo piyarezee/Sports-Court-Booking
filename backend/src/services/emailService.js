@@ -2,6 +2,10 @@
  * Send booking submitted confirmation (to customer)
  */
 async function sendBookingSubmittedEmail({ to, name, courtName, date, slot, amount, bookingId, qrCode }) {
+  // Convert Data URL to Buffer for email attachment
+  const base64Data = qrCode.split(',')[1];
+  const qrBuffer = Buffer.from(base64Data, 'base64');
+
   const mailOptions = {
     from: `"Sports Court Booking" <${process.env.EMAIL_USER}>`,
     to,
@@ -36,14 +40,19 @@ async function sendBookingSubmittedEmail({ to, name, courtName, date, slot, amou
         </table>
 
         <div style="text-align: center; margin: 30px 0;">
-          <p style="color: #666; font-size: 14px; margin-bottom: 10px;">Show this QR code at the court for check-in:</p>
-          <img src="${qrCode}" alt="Booking QR Code" style="width: 180px; height: 180px; border: 1px solid #ddd; padding: 10px; border-radius: 8px;" />
+          <p style="color: #666; font-size: 14px; margin-bottom: 10px;">Show the attached QR code at the court for check-in:</p>
+          <img src="cid:qrcode@example.com" alt="Booking QR Code" style="width: 180px; height: 180px; border: 1px solid #ddd; padding: 10px; border-radius: 8px;" />
         </div>
 
         <p>You will receive another email once your booking is approved or rejected.</p>
         <p style="color: #666; font-size: 13px;">Thank you for choosing us!</p>
       </div>
-    `
+    `,
+    attachments: [{
+      filename: `${bookingId}-qrcode.png`,
+      content: qrBuffer,
+      cid: 'qrcode@example.com' // Same cid as in img src
+    }]
   };
 
   await transporter.sendMail(mailOptions);

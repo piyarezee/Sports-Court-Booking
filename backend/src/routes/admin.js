@@ -4,26 +4,37 @@ const emailService = require('../services/emailService');
 
 const router = express.Router();
 
+// Custom Staff Auth Middleware
+const staffAuth = (req, res, next) => {
+  const authHeader = req.header('Authorization');
+  if (!authHeader) return res.status(401).json({ error: 'No token provided' });
+  
+  const token = authHeader.replace('Bearer ', '');
+  const decoded = Buffer.from(token, 'base64').toString('utf8');
+  const [role, password] = decoded.split(':');
+  
+  const staffPassword = process.env.STAFF_PASSWORD || 'staff123';
+  if (role === 'staff' && password === staffPassword) {
+    next();
+  } else {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+};
+
 // ==========================================
-// PUBLIC ROUTES (No Auth Required)
+// PUBLIC & STAFF ROUTES (No Admin Auth)
 // ==========================================
 
 // POST /api/admin/login
 router.post('/login', (req, res) => {
   const { email, password } = req.body;
-
   if (
     email === process.env.ADMIN_EMAIL &&
     password === process.env.ADMIN_PASSWORD
   ) {
     const token = Buffer.from(`${email}:${password}`).toString('base64');
-    return res.json({
-      success: true,
-      token,
-      admin: { email }
-    });
+    return res.json({ success: true, token, admin: { email } });
   }
-
   return res.status(401).json({ success: false, error: 'Invalid email or password' });
 });
 
@@ -31,17 +42,26 @@ router.post('/login', (req, res) => {
 router.post('/staff/login', (req, res) => {
   const { password } = req.body;
   const staffPassword = process.env.STAFF_PASSWORD || 'staff123';
-
   if (password === staffPassword) {
     const token = Buffer.from(`staff:${password}`).toString('base64');
-    return res.json({
-      success: true,
-      token,
-      role: 'staff'
-    });
+    return res.json({ success: true, token, role: 'staff' });
   }
-
   return res.status(401).json({ success: false, error: 'Invalid staff password' });
+});
+
+// GET /api/admin/staff/today-bookings (Protected by Staff Auth)
+router.get('/staff/today-bookings', staffAuth, async (req, res) => {
+  try {
+    const bookings = await sheetsService.getBookings();
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    const todayBookings = bookings.filter(b => b.date === today && b.status === 'approved');
+    
+    res.json({ success: true, data: todayBookings });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // ==========================================
@@ -187,42 +207,6 @@ router.get('/contact', async (req, res) => {
   try {
     const data = await sheetsService.getSheetData(sheetsService.SHEETS.CONTACT);
     res.json({ success: true, data });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// ==========================================
-// STAFF PROTECTED ROUTE
-// ==========================================
-
-// Custom Staff Auth Middleware
-const staffAuth = (req, res, next) => {
-  const authHeader = req.header('Authorization');
-  if (!authHeader) return res.status(401).json({ error: 'No token provided' });
-  
-  const token = authHeader.replace('Bearer ', '');
-  const decoded = Buffer.from(token, 'base64').toString('utf8');
-  const [role, password] = decoded.split(':');
-  
-  const staffPassword = process.env.STAFF_PASSWORD || 'staff123';
-  if (role === 'staff' && password === staffPassword) {
-    next();
-  } else {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-};
-
-// GET /api/admin/staff/today-bookings
-router.get('/staff/today-bookings', staffAuth, async (req, res) => {
-  try {
-    const bookings = await sheetsService.getBookings();
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    
-    const todayBookings = bookings.filter(b => b.date === today && b.status === 'approved');
-    
-    res.json({ success: true, data: todayBookings });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: err.message });

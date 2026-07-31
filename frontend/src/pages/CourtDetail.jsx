@@ -8,7 +8,7 @@ export default function CourtDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [court, setCourt] = useState(null)
-  const [activeMedia, setActiveMedia] = useState(null) // 'video', 'gallery', 'map', or null
+  const [activeMedia, setActiveMedia] = useState(null)
 
   useEffect(() => {
     async function loadCourt() {
@@ -49,7 +49,6 @@ export default function CourtDetail() {
     navigate(`/court/${id}/slots?date=${selectedDate}`)
   }
 
-  // Extract YouTube Video ID
   const getYouTubeID = (url) => {
     if (!url) return null;
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
@@ -64,7 +63,7 @@ export default function CourtDetail() {
       <div className="max-w-lg mx-auto bg-gray-50 min-h-screen shadow-sm">
         <Header title={court.name} showBack backTo="/" />
 
-        {/* Court Main Image - Fixed inside container */}
+        {/* Court Main Image */}
         <div className="relative h-60 w-full bg-gray-100 overflow-hidden">
           <img 
             src={court.image} 
@@ -131,10 +130,10 @@ export default function CourtDetail() {
             </div>
           </div>
 
-          {/* Date Selection */}
+          {/* Date Selection - Grid Layout (7 days per row) */}
           <div className="mb-4">
             <h3 className="font-semibold text-gray-900 mb-3">Select Date</h3>
-            <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+            <div className="grid grid-cols-7 gap-1.5 sm:gap-2 pb-2">
               {dates.map((date) => {
                 const value = formatDateValue(date)
                 const isSelected = selectedDate === value
@@ -144,21 +143,20 @@ export default function CourtDetail() {
                   <button
                     key={value}
                     onClick={() => setSelectedDate(value)}
-                    className={`
-                      flex-shrink-0 w-16 py-3 rounded-xl text-center transition-all
+                    className={`py-2 rounded-lg text-center transition-all flex flex-col items-center justify-center
                       ${isSelected 
-                        ? 'bg-primary-600 text-white shadow-md shadow-primary-200' 
+                        ? 'bg-primary-600 text-white shadow-md' 
                         : 'bg-white border border-gray-200 text-gray-700 hover:border-primary-300'
-                      }
-                    `}
+                      }`
+                    }
                   >
-                    <div className="text-[10px] uppercase opacity-70">
+                    <div className="text-[9px] sm:text-[10px] uppercase opacity-70">
                       {isToday ? 'Today' : date.toLocaleDateString('en-PK', { weekday: 'short' })}
                     </div>
-                    <div className="text-lg font-bold leading-tight">
+                    <div className="text-sm sm:text-lg font-bold leading-tight">
                       {date.getDate()}
                     </div>
-                    <div className="text-[10px] opacity-70">
+                    <div className="text-[9px] sm:text-[10px] opacity-70 hidden sm:block">
                       {date.toLocaleDateString('en-PK', { month: 'short' })}
                     </div>
                   </button>
@@ -175,17 +173,14 @@ export default function CourtDetail() {
           <button
             onClick={handleContinue}
             disabled={!selectedDate}
-            className={`
-              w-full btn-primary text-center
-              ${!selectedDate ? 'opacity-50 cursor-not-allowed' : ''}
-            `}
+            className={`w-full btn-primary text-center ${!selectedDate ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {selectedDate ? 'View Available Slots' : 'Select a Date'}
           </button>
         </div>
       </div>
 
-      {/* Media Modal / Popup */}
+      {/* Media Modal */}
       {activeMedia && (
         <div className="fixed inset-0 z-50 bg-black/90 flex flex-col p-4">
           <div className="flex justify-end mb-4">

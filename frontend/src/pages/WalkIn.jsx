@@ -30,27 +30,29 @@ export default function WalkIn() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b p-4">
-        <div className="max-w-lg mx-auto flex items-center">
-          <button onClick={() => navigate('/admin')} className="mr-4 text-gray-600">←</button>
-          <h1 className="font-bold text-lg">Walk-in Cash Entry</h1>
-        </div>
-      </header>
-      <main className="max-w-lg mx-auto p-4">
-        <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl shadow-sm border space-y-4">
-          {error && <p className="text-red-500 text-sm bg-red-50 p-2 rounded">{error}</p>}
-          <input name="customerName" value={form.customerName} onChange={handleChange} placeholder="Customer Name" className="input-field" required />
-          <input name="mobile" value={form.mobile} onChange={handleChange} placeholder="Mobile (Optional)" className="input-field" />
-          <input name="courtName" value={form.courtName} onChange={handleChange} placeholder="Court Name" className="input-field" required />
-          <input type="date" name="date" value={form.date} onChange={handleChange} className="input-field" required />
-          <input name="time" value={form.time} onChange={handleChange} placeholder="Time (e.g., 19:00 - 20:00)" className="input-field" required />
-          <input type="number" name="amount" value={form.amount} onChange={handleChange} placeholder="Amount (Rs.)" className="input-field" required />
-          <button type="submit" disabled={loading} className="btn-primary w-full">
-            {loading ? 'Saving...' : 'Save Walk-in'}
-          </button>
-        </form>
-      </main>
+    <div className="min-h-screen bg-gray-50 flex justify-center">
+      <div className="w-full max-w-lg bg-gray-50 shadow-xl min-h-screen">
+        <header className="bg-white border-b p-4">
+          <div className="max-w-lg mx-auto flex items-center">
+            <button onClick={() => navigate('/admin')} className="mr-4 text-gray-600">←</button>
+            <h1 className="font-bold text-lg">Walk-in Cash Entry</h1>
+          </div>
+        </header>
+        <main className="max-w-lg mx-auto p-4">
+          <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl shadow-sm border space-y-4">
+            {error && <p className="text-red-500 text-sm bg-red-50 p-2 rounded">{error}</p>}
+            <input name="customerName" value={form.customerName} onChange={handleChange} placeholder="Customer Name" className="input-field" required />
+            <input name="mobile" value={form.mobile} onChange={handleChange} placeholder="Mobile (Optional)" className="input-field" />
+            <input name="courtName" value={form.courtName} onChange={handleChange} placeholder="Court Name" className="input-field" required />
+            <input type="date" name="date" value={form.date} onChange={handleChange} className="input-field" required />
+            <input name="time" value={form.time} onChange={handleChange} placeholder="Time (e.g., 19:00 - 20:00)" className="input-field" required />
+            <input type="number" name="amount" value={form.amount} onChange={handleChange} placeholder="Amount (Rs.)" className="input-field" required />
+            <button type="submit" disabled={loading} className="btn-primary w-full">
+              {loading ? 'Saving...' : 'Save Walk-in'}
+            </button>
+          </form>
+        </main>
+      </div>
     </div>
   )
 }

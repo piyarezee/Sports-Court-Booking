@@ -16,14 +16,21 @@ const SHEETS = {
   MONTHLY_REPORT: 'Monthly_Report'
 };
 
+// Helper to safely format sheet range
+function getRange(sheetName, cellRange = 'A:Z') {
+  // If sheet name has space or hyphen, wrap in single quotes
+  const safeName = /[\s\-]/.test(sheetName) ? `'${sheetName}'` : sheetName;
+  return `${safeName}!${cellRange}`;
+}
+
 /**
- * Read all rows from a sheet (assuming first row is header)
+ * Read all rows from a sheet
  */
 async function getSheetData(sheetName) {
   const sheets = getSheetsClient();
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
-    range: `'${sheetName}'!A:Z` // Single quotes added to handle sheet names like 'Walk-ins'
+    range: getRange(sheetName)
   });
 
   const rows = response.data.values || [];
@@ -46,7 +53,7 @@ async function appendRow(sheetName, values) {
   const sheets = getSheetsClient();
   await sheets.spreadsheets.values.append({
     spreadsheetId: SPREADSHEET_ID,
-    range: `'${sheetName}'!A:Z`, // Single quotes added
+    range: getRange(sheetName),
     valueInputOption: 'USER_ENTERED',
     requestBody: {
       values: [values]
@@ -55,11 +62,11 @@ async function appendRow(sheetName, values) {
 }
 
 /**
- * Update a specific row (by row number, 1-indexed including header)
+ * Update a specific row
  */
 async function updateRow(sheetName, rowNumber, values) {
   const sheets = getSheetsClient();
-  const range = `'${sheetName}'!A${rowNumber}:Z${rowNumber}`; // Single quotes added
+  const range = getRange(sheetName, `A${rowNumber}:Z${rowNumber}`);
   await sheets.spreadsheets.values.update({
     spreadsheetId: SPREADSHEET_ID,
     range,
@@ -71,19 +78,19 @@ async function updateRow(sheetName, rowNumber, values) {
 }
 
 /**
- * Find row number by a column value (returns 1-indexed row including header, or null)
+ * Find row number by a column value
  */
 async function findRowNumber(sheetName, columnIndex, value) {
   const sheets = getSheetsClient();
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
-    range: `'${sheetName}'!A:Z` // Single quotes added
+    range: getRange(sheetName)
   });
 
   const rows = response.data.values || [];
   for (let i = 1; i < rows.length; i++) {
     if ((rows[i][columnIndex] || '').toString() === value.toString()) {
-      return i + 1; // 1-indexed
+      return i + 1; 
     }
   }
   return null;
@@ -182,16 +189,15 @@ async function updateBookingStatus(bookingId, status, notes = '') {
   const sheets = getSheetsClient();
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
-    range: `'${SHEETS.BOOKINGS}'!A${rowNum}:O${rowNum}`
+    range: getRange(SHEETS.BOOKINGS, `A${rowNum}:O${rowNum}`)
   });
 
   const row = response.data.values[0];
-  row[11] = status; // status column (L = index 11)
+  row[11] = status; 
   if (notes) row[13] = notes;
 
   await updateRow(SHEETS.BOOKINGS, rowNum, row);
   
-  // Agar booking approve ho, toh Payments tab mein bhi entry karo
   if (status === 'approved') {
     await appendRow(SHEETS.PAYMENTS, [
       `PAY-${Date.now()}`,
@@ -241,7 +247,6 @@ async function createWalkIn(walkIn) {
     'Completed'
   ]);
 
-  // Walk-in ka payment bhi Payments tab mein add karein
   await appendRow(SHEETS.PAYMENTS, [
     `PAY-${Date.now()}`,
     id,

@@ -53,11 +53,11 @@ router.post('/staff/login', (req, res) => {
 router.get('/staff/today-bookings', staffAuth, async (req, res) => {
   try {
     const bookings = await sheetsService.getBookings();
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     
-    const todayBookings = bookings.filter(b => b.date === today && b.status === 'approved');
+    // Sirf Approved bookings bhej rahe hain (Date filter hata diya timezone issue ki wajah se)
+    const approvedBookings = bookings.filter(b => b.status === 'approved');
     
-    res.json({ success: true, data: todayBookings });
+    res.json({ success: true, data: approvedBookings });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: err.message });

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Html5Qrcode } from 'html5-qrcode' // Changed to Html5Qrcode for better control
+import { Html5Qrcode } from 'html5-qrcode'
 import axios from 'axios'
 
 const API = import.meta.env.VITE_API_URL || '/api'
@@ -47,12 +47,14 @@ export default function StaffDashboard() {
         qrbox: { width: 250, height: 250 }
       },
       (decodedText) => {
-        // On Successful Scan
-        const foundBooking = bookings.find(b => b.bookingId === decodedText)
+        // On Successful Scan (Added .trim() to remove any hidden spaces)
+        const cleanText = decodedText.trim();
+        const foundBooking = bookings.find(b => b.bookingId === cleanText)
+        
         if (foundBooking) {
           setScanResult({ status: 'success', booking: foundBooking })
         } else {
-          setScanResult({ status: 'error', message: `Invalid QR: ${decodedText}` })
+          setScanResult({ status: 'error', message: `Invalid or Pending QR: ${cleanText}` })
         }
         scanner.stop().catch(() => {})
       },

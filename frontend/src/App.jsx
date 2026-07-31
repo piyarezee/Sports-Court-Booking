@@ -7,6 +7,9 @@ import Success from './pages/Success'
 import AdminLogin from './pages/admin/Login'
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminBookings from './pages/admin/Bookings'
+import WalkIn from './pages/WalkIn'
+import Payments from './pages/Payments'
+import ContactMessages from './pages/ContactMessages'
 
 function App() {
   return (
@@ -23,6 +26,11 @@ function App() {
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/bookings" element={<AdminBookings />} />
+        
+        {/* New Admin Routes */}
+        <Route path="/admin/walk-in" element={<WalkIn />} />
+        <Route path="/admin/payments" element={<Payments />} />
+        <Route path="/admin/contact" element={<ContactMessages />} />
       </Routes>
     </div>
   )

@@ -98,10 +98,12 @@ async function getCourts() {
       image: c.image || '',
       description: c.description || '',
       amenities: c.amenities ? c.amenities.split(',').map(a => a.trim()) : [],
+      youtubeUrl: c.youtube_url || '',
+      gallery: c.gallery || '',
+      mapUrl: c.map_url || '',
       isActive: true
     }));
 }
-
 async function getCourtById(id) {
   const courts = await getCourts();
   return courts.find(c => c.id === id) || null;

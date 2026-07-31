@@ -22,12 +22,20 @@ export default function SlotSelection() {
   useEffect(() => {
     async function loadData() {
       try {
-        const courtData = await getCourt(courtId)
-        setCourt(courtData)
+        // Dono data parallel fetch kar rahe hain taake time bachay
+        const [courtRes, bookingsRes] = await Promise.all([
+          getCourt(courtId),
+          axios.get(`${API}/bookings`)
+        ]);
         
-        // Fetch booked slots for this date and court
-        const bookingsRes = await axios.get(`${API}/bookings?courtId=${courtId}&date=${date}`)
-        setBookedSlots(bookingsRes.data.data.map(b => b.slotStart))
+        setCourt(courtRes);
+        
+        // Frontend par filter kar rahe hain taake backend par load na paaye
+        const filteredBookings = bookingsRes.data.data.filter(
+          b => b.courtId === courtId && b.date === date
+        );
+        setBookedSlots(filteredBookings.map(b => b.slotStart));
+        
       } catch {
         setCourt(mockCourts.find(c => c.id === courtId) || null)
       } finally {
@@ -36,7 +44,6 @@ export default function SlotSelection() {
     }
     if (courtId && date) loadData()
   }, [courtId, date])
-
   // Generate slots from 10:00 to 22:00
   const allSlots = Array.from({ length: 13 }, (_, i) => `${String(i + 10).padStart(2, '0')}:00`)
 

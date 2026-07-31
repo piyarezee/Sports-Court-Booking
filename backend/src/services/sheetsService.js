@@ -3,16 +3,21 @@ require('dotenv').config();
 
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 
-// Sheet names
+// Sheet names (Nayi tabs add kiye hain)
 const SHEETS = {
   CUSTOMERS: 'Customers',
   COURTS: 'Courts',
   BOOKINGS: 'Bookings',
-  SETTINGS: 'Settings'
+  SETTINGS: 'Settings',
+  PAYMENTS: 'Payments',
+  WALK_INS: 'Walk-ins',
+  CONTACT: 'Contact',
+  DAILY_REPORT: 'Daily_Report',
+  MONTHLY_REPORT: 'Monthly_Report'
 };
 
 /**
- * Read all rows from a sheet (assuming first row is header)
+ * Read all rows from a sheet
  */
 async function getSheetData(sheetName) {
   const sheets = getSheetsClient();
@@ -50,7 +55,7 @@ async function appendRow(sheetName, values) {
 }
 
 /**
- * Update a specific row (by row number, 1-indexed including header)
+ * Update a specific row
  */
 async function updateRow(sheetName, rowNumber, values) {
   const sheets = getSheetsClient();
@@ -66,7 +71,7 @@ async function updateRow(sheetName, rowNumber, values) {
 }
 
 /**
- * Find row number by a column value (returns 1-indexed row including header, or null)
+ * Find row number by a column value
  */
 async function findRowNumber(sheetName, columnIndex, value) {
   const sheets = getSheetsClient();
@@ -78,7 +83,7 @@ async function findRowNumber(sheetName, columnIndex, value) {
   const rows = response.data.values || [];
   for (let i = 1; i < rows.length; i++) {
     if ((rows[i][columnIndex] || '').toString() === value.toString()) {
-      return i + 1; // 1-indexed
+      return i + 1; 
     }
   }
   return null;
@@ -104,6 +109,7 @@ async function getCourts() {
       isActive: true
     }));
 }
+
 async function getCourtById(id) {
   const courts = await getCourts();
   return courts.find(c => c.id === id) || null;
@@ -180,10 +186,24 @@ async function updateBookingStatus(bookingId, status, notes = '') {
   });
 
   const row = response.data.values[0];
-  row[11] = status; // status column (L = index 11)
+  row[11] = status; 
   if (notes) row[13] = notes;
 
   await updateRow(SHEETS.BOOKINGS, rowNum, row);
+  
+  // Agar booking approve/reject ho, toh Payments tab mein bhi entry karo
+  if (status === 'approved') {
+    await appendRow(SHEETS.PAYMENTS, [
+      `PAY-${Date.now()}`,
+      bookingId,
+      row[6], // Customer Name
+      row[9], // Amount
+      'Online / Transfer',
+      'Received',
+      new Date().toISOString()
+    ]);
+  }
+
   return { id: bookingId, status, notes };
 }
 
@@ -203,6 +223,66 @@ async function upsertCustomer({ name, mobile, email }) {
   const createdAt = new Date().toISOString();
   await appendRow(SHEETS.CUSTOMERS, [id, name, mobile, email, createdAt]);
   return { id, name, mobile, email, created_at: createdAt };
+}
+
+// ========== WALK-INS ==========
+async function createWalkIn(walkIn) {
+  const id = `WI-${Date.now()}`;
+  const createdAt = new Date().toISOString();
+  
+  await appendRow(SHEETS.WALK_INS, [
+    id,
+    walkIn.customerName,
+    walkIn.mobile,
+    walkIn.courtName,
+    walkIn.date,
+    walkIn.time,
+    walkIn.amount,
+    'Completed'
+  ]);
+
+  // Walk-in ka payment bhi Payments tab mein add karein
+  await appendRow(SHEETS.PAYMENTS, [
+    `PAY-${Date.now()}`,
+    id,
+    walkIn.customerName,
+    walkIn.amount,
+    'Cash',
+    'Received',
+    createdAt
+  ]);
+
+  return { id, ...walkIn, status: 'Completed' };
+}
+
+// ========== CONTACT ==========
+async function createContactMessage({ name, email, message }) {
+  const id = `MSG-${Date.now()}`;
+  const createdAt = new Date().toISOString();
+  
+  await appendRow(SHEETS.CONTACT, [id, name, email, message, createdAt]);
+  return { id, name, email, message, createdAt };
+}
+
+// ========== REPORTS ==========
+async function getDashboardStats() {
+  const bookings = await getBookings();
+  const payments = await getSheetData(SHEETS.PAYMENTS);
+  
+  const totalBookings = bookings.length;
+  const pendingBookings = bookings.filter(b => b.status === 'pending').length;
+  const approvedBookings = bookings.filter(b => b.status === 'approved').length;
+  
+  const totalRevenue = payments
+    .filter(p => p.status && p.status.toLowerCase() === 'received')
+    .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+
+  return {
+    totalBookings,
+    pendingBookings,
+    approvedBookings,
+    totalRevenue
+  };
 }
 
 // ========== SETTINGS ==========
@@ -227,5 +307,8 @@ module.exports = {
   upsertCustomer,
   getSettings,
   getSheetData,
-  appendRow
+  appendRow,
+  createWalkIn,
+  createContactMessage,
+  getDashboardStats
 };

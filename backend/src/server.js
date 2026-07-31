@@ -22,7 +22,7 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
     message: 'Sports Court Booking API is running',
-    version: '1.0.0',
+    version: '1.1.1',
     timestamp: new Date().toISOString()
   });
 });
@@ -32,6 +32,7 @@ app.use('/auth', require('./routes/auth'));
 app.use('/api/courts', require('./routes/courts'));
 app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/contact', require('./routes/contact')); // <-- Naya Contact Route Add Kiya
 
 // 404 handler
 app.use((req, res) => {

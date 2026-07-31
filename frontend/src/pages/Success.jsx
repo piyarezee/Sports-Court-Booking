@@ -36,6 +36,12 @@ export default function Success() {
             Booking Details
           </h3>
           <div className="space-y-2.5 text-sm">
+            {state.bookingId && (
+              <div className="flex justify-between">
+                <span className="text-gray-500">Booking ID</span>
+                <span className="font-medium text-gray-900">{state.bookingId}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-gray-500">Name</span>
               <span className="font-medium text-gray-900">{state.name}</span>
@@ -62,6 +68,17 @@ export default function Success() {
             </div>
           </div>
         </div>
+
+        {/* QR Code Section */}
+        {state.qrCode && (
+          <div className="card w-full mb-8 text-center">
+            <h3 className="font-semibold text-gray-900 mb-3 border-b border-gray-100 pb-2">
+              Check-in QR Code
+            </h3>
+            <p className="text-gray-500 text-xs mb-4">Save this QR code. You will need to show it at the court.</p>
+            <img src={state.qrCode} alt="Booking QR Code" className="mx-auto w-48 h-48 rounded-lg border p-2" />
+          </div>
+        )}
 
         <div className="w-full space-y-3">
           <Link to="/" className="block w-full btn-primary text-center">

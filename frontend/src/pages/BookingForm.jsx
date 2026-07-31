@@ -18,6 +18,22 @@ export default function BookingForm() {
   const [preview, setPreview] = useState(null)
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
+  
+  // 15-minute timer state (900 seconds)
+  const [timeLeft, setTimeLeft] = useState(900)
+
+  // Timer effect
+  useEffect(() => {
+    if (timeLeft <= 0) {
+      alert('Time expired! Please select a slot again.')
+      navigate(`/court/${courtId}/slots?date=${date}`)
+      return;
+    }
+    const timerId = setInterval(() => {
+      setTimeLeft(prev => prev - 1)
+    }, 1000);
+    return () => clearInterval(timerId);
+  }, [timeLeft, courtId, date, navigate])
 
   useEffect(() => {
     async function load() {
@@ -50,6 +66,11 @@ export default function BookingForm() {
   const formattedDate = new Date(date).toLocaleDateString('en-PK', {
     weekday: 'short', day: 'numeric', month: 'short'
   })
+
+  // Format timer to MM:SS
+  const minutes = Math.floor(timeLeft / 60);
+  const seconds = timeLeft % 60;
+  const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -114,27 +135,16 @@ export default function BookingForm() {
           name: form.name,
           mobile: form.mobile,
           amount: court.pricePerHour,
-          bookingId: result.data?.id
+          bookingId: result.data?.bookingId || result.data?.id,
+          qrCode: result.data?.qrCode
         }
       })
     } catch (err) {
       console.error(err)
-      // Fallback: still go to success with mock (for demo when backend not fully ready)
       if (err.response?.status === 409) {
         setErrors({ form: 'This slot is already booked. Please choose another.' })
       } else {
-        // For now allow demo success even if API fails
-        navigate('/success', {
-          state: {
-            courtName: court.name,
-            date: formattedDate,
-            slot: `${slot}`,
-            name: form.name,
-            mobile: form.mobile,
-            amount: court.pricePerHour,
-            bookingId: 'DEMO-' + Date.now()
-          }
-        })
+        setErrors({ form: 'Failed to submit booking. Please try again.' })
       }
     } finally {
       setSubmitting(false)
@@ -146,6 +156,14 @@ export default function BookingForm() {
       <Header title="Complete Booking" showBack backTo={`/court/${courtId}/slots?date=${date}`} />
 
       <main className="max-w-lg mx-auto px-4 pt-5">
+        {/* Timer Warning */}
+        <div className={`flex items-center justify-center gap-2 p-3 mb-5 rounded-lg text-sm font-medium ${timeLeft < 60 ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Time remaining to complete booking: {formattedTime}
+        </div>
+
         <div className="card mb-5 bg-primary-50 border-primary-100">
           <h3 className="font-semibold text-primary-900 mb-2">Booking Summary</h3>
           <div className="space-y-1 text-sm">

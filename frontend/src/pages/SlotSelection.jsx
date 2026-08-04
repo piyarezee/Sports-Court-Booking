@@ -2,7 +2,6 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import Header from '../components/Header'
-import { getCourt } from '../services/api'
 import { courts as mockCourts } from '../data/mockData'
 
 const API = import.meta.env.VITE_API_URL || '/api'
@@ -20,34 +19,38 @@ export default function SlotSelection() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let isMounted = true;
+    
     async function loadData() {
       setLoading(true);
       
-      // 1. Court Load Karo (8 second timeout ke sath)
+      // 1. Court Load Karo (5 second strict timeout)
       try {
-        const courtData = await getCourt(courtId)
-        setCourt(courtData)
+        const courtRes = await axios.get(`${API}/courts/${courtId}`, { timeout: 5000 })
+        if (isMounted) setCourt(courtRes.data?.data || null)
       } catch {
-        // Agar backend so raha hai, toh mock data dikhao taake page load ho
-        setCourt(mockCourts.find(c => c.id === courtId) || null)
+        // Agar backend so raha hai, toh mock data dikhao
+        if (isMounted) setCourt(mockCourts.find(c => c.id === courtId) || null)
       }
 
-      // 2. Booked Slots Fetch Karo (8 second timeout ke sath)
+      // 2. Booked Slots Fetch Karo (5 second strict timeout)
       try {
-        const response = await axios.get(`${API}/bookings`, { timeout: 8000 })
+        const response = await axios.get(`${API}/bookings`, { timeout: 5000 })
         const allBookings = response.data?.data || []
         const filteredBookings = allBookings.filter(b => b.courtId === courtId && b.date === date)
-        setBookedSlots(filteredBookings.map(b => b.slotStart))
+        if (isMounted) setBookedSlots(filteredBookings.map(b => b.slotStart))
       } catch (err) {
         // Agar backend so raha hai, toh koi slot booked mat dikhao
-        console.log("Backend sleeping, showing all slots available.")
-        setBookedSlots([])
+        if (isMounted) setBookedSlots([])
       } finally {
-        setLoading(false)
+        // 100% loading false ho jayegi chahe backend koi bhi ho
+        if (isMounted) setLoading(false)
       }
     }
     
     if (courtId && date) loadData()
+    
+    return () => { isMounted = false };
   }, [courtId, date])
 
   // Generate slots from 10:00 to 22:00

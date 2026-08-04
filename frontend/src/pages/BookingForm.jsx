@@ -1,9 +1,8 @@
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import axios from 'axios'
 import Header from '../components/Header'
-
-const API = import.meta.env.VITE_API_URL || '/api'
+import { getCourt, createBooking } from '../services/api'
+import { courts as mockCourts } from '../data/mockData'
 
 export default function BookingForm() {
   const [searchParams] = useSearchParams()
@@ -38,12 +37,10 @@ export default function BookingForm() {
   useEffect(() => {
     async function load() {
       try {
-        // 5 second timeout ke sath court data fetch karo
-        const res = await axios.get(`${API}/courts/${courtId}`, { timeout: 5000 })
-        setCourt(res.data?.data)
+        const data = await getCourt(courtId)
+        setCourt(data)
       } catch {
-        // Agar backend so raha hai, toh basic info set karo taake form load ho
-        setCourt({ id: courtId, name: 'Court', pricePerHour: 0 })
+        setCourt(mockCourts.find(c => c.id === courtId) || null)
       }
     }
     if (courtId) load()
@@ -62,7 +59,7 @@ export default function BookingForm() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600 mx-auto mb-3"></div>
-          <p className="text-gray-500">Loading booking form...</p>
+          <p className="text-gray-500">Loading...</p>
         </div>
       </div>
     )
@@ -129,11 +126,8 @@ export default function BookingForm() {
       formData.append('email', form.email)
       formData.append('paymentScreenshot', paymentFile)
 
-      // Direct axios call with 60s timeout (kyunki image upload thoda time leta hai)
-      const result = await axios.post(`${API}/bookings`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 60000
-      })
+      // Using the original API function which handles FormData perfectly
+      const result = await createBooking(formData)
 
       navigate('/success', {
         state: {
@@ -143,8 +137,8 @@ export default function BookingForm() {
           name: form.name,
           mobile: form.mobile,
           amount: court.pricePerHour,
-          bookingId: result.data?.data?.bookingId || result.data?.data?.id,
-          qrCode: result.data?.data?.qrCode
+          bookingId: result.data?.bookingId || result.data?.id,
+          qrCode: result.data?.qrCode
         }
       })
     } catch (err) {

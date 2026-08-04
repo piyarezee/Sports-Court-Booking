@@ -2,7 +2,6 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import Header from '../components/Header'
-import { courts as mockCourts } from '../data/mockData'
 
 const API = import.meta.env.VITE_API_URL || '/api'
 
@@ -13,33 +12,44 @@ export default function SlotSelection() {
   const courtId = searchParams.get('court')
   const date = searchParams.get('date')
 
-  // Start with mock court so it renders INSTANTLY (No loading screen)
-  const [court, setCourt] = useState(mockCourts.find(c => c.id === courtId) || null)
+  const [court, setCourt] = useState(null)
   const [bookedSlots, setBookedSlots] = useState([])
   const [selectedSlot, setSelectedSlot] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let isMounted = true;
+    
     async function loadData() {
-      // 1. Fetch Real Court Data in background
+      setLoading(true);
+      
+      // 1. Court Load Karo (5 second timeout)
       try {
         const courtRes = await axios.get(`${API}/courts/${courtId}`, { timeout: 5000 })
-        if (courtRes.data?.data) setCourt(courtRes.data.data)
+        if (isMounted && courtRes.data?.data) setCourt(courtRes.data.data)
       } catch (err) {
-        // Keep mock court if backend is sleeping
+        // Agar backend so raha hai, toh basic info set karo taake page load ho
+        if (isMounted) setCourt({ id: courtId, name: 'Court', pricePerHour: 0 })
       }
 
-      // 2. Fetch Booked Slots in background
+      // 2. Booked Slots Fetch Karo (5 second timeout)
       try {
         const response = await axios.get(`${API}/bookings`, { timeout: 5000 })
         const allBookings = response.data?.data || []
         const filteredBookings = allBookings.filter(b => b.courtId === courtId && b.date === date)
-        setBookedSlots(filteredBookings.map(b => b.slotStart))
+        if (isMounted) setBookedSlots(filteredBookings.map(b => b.slotStart))
       } catch (err) {
-        // Show all slots available if backend fails
+        // Agar backend so raha hai, toh koi slot booked mat dikhao
+        if (isMounted) setBookedSlots([])
+      } finally {
+        // 100% loading false ho jayegi
+        if (isMounted) setLoading(false)
       }
     }
     
     if (courtId && date) loadData()
+    
+    return () => { isMounted = false };
   }, [courtId, date])
 
   // Generate slots from 10:00 to 22:00
@@ -50,10 +60,13 @@ export default function SlotSelection() {
     navigate(`/book?court=${courtId}&date=${date}&slot=${selectedSlot}`)
   }
 
-  if (!court) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-500">Court not found</p>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600 mx-auto mb-3"></div>
+          <p className="text-gray-500">Fetching available slots...</p>
+        </div>
       </div>
     )
   }
@@ -70,7 +83,7 @@ export default function SlotSelection() {
         <main className="px-4 py-5">
           {/* Date & Court Info */}
           <div className="bg-primary-600 text-white p-4 rounded-2xl mb-6 shadow-md">
-            <h2 className="text-lg font-bold">{court.name}</h2>
+            <h2 className="text-lg font-bold">{court?.name || 'Court'}</h2>
             <p className="text-primary-100 text-sm flex items-center gap-1.5 mt-1">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -84,7 +97,7 @@ export default function SlotSelection() {
             Available Time Slots
           </h3>
 
-          {/* Slots Grid - Renders Instantly */}
+          {/* Slots Grid */}
           <div className="grid grid-cols-3 gap-3">
             {allSlots.map(slot => {
               const isBooked = bookedSlots.includes(slot)

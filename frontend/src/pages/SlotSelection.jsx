@@ -12,44 +12,33 @@ export default function SlotSelection() {
   const courtId = searchParams.get('court')
   const date = searchParams.get('date')
 
-  const [court, setCourt] = useState(null)
+  // Loading screen hata diya, direct default court set kiya
+  const [court, setCourt] = useState({ name: 'Court', pricePerHour: 0 })
   const [bookedSlots, setBookedSlots] = useState([])
   const [selectedSlot, setSelectedSlot] = useState(null)
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    let isMounted = true;
-    
     async function loadData() {
-      setLoading(true);
-      
-      // 1. Court Load Karo (5 second timeout)
+      // 1. Backend se Real Court Data lo (agar backend jag raha hai toh)
       try {
         const courtRes = await axios.get(`${API}/courts/${courtId}`, { timeout: 5000 })
-        if (isMounted && courtRes.data?.data) setCourt(courtRes.data.data)
+        if (courtRes.data?.data) setCourt(courtRes.data.data)
       } catch (err) {
-        // Agar backend so raha hai, toh basic info set karo taake page load ho
-        if (isMounted) setCourt({ id: courtId, name: 'Court', pricePerHour: 0 })
+        // Agar backend so raha hai, toh default "Court" hi rehne do
       }
 
-      // 2. Booked Slots Fetch Karo (5 second timeout)
+      // 2. Backend se Booked Slots lo
       try {
         const response = await axios.get(`${API}/bookings`, { timeout: 5000 })
         const allBookings = response.data?.data || []
         const filteredBookings = allBookings.filter(b => b.courtId === courtId && b.date === date)
-        if (isMounted) setBookedSlots(filteredBookings.map(b => b.slotStart))
+        setBookedSlots(filteredBookings.map(b => b.slotStart))
       } catch (err) {
         // Agar backend so raha hai, toh koi slot booked mat dikhao
-        if (isMounted) setBookedSlots([])
-      } finally {
-        // 100% loading false ho jayegi
-        if (isMounted) setLoading(false)
       }
     }
     
     if (courtId && date) loadData()
-    
-    return () => { isMounted = false };
   }, [courtId, date])
 
   // Generate slots from 10:00 to 22:00
@@ -58,17 +47,6 @@ export default function SlotSelection() {
   const handleContinue = () => {
     if (!selectedSlot) return
     navigate(`/book?court=${courtId}&date=${date}&slot=${selectedSlot}`)
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600 mx-auto mb-3"></div>
-          <p className="text-gray-500">Fetching available slots...</p>
-        </div>
-      </div>
-    )
   }
 
   const formattedDate = new Date(date).toLocaleDateString('en-PK', {
@@ -97,7 +75,7 @@ export default function SlotSelection() {
             Available Time Slots
           </h3>
 
-          {/* Slots Grid */}
+          {/* Slots Grid - Renders Instantly */}
           <div className="grid grid-cols-3 gap-3">
             {allSlots.map(slot => {
               const isBooked = bookedSlots.includes(slot)

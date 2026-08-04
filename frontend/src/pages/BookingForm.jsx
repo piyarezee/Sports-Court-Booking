@@ -1,8 +1,9 @@
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import axios from 'axios'
 import Header from '../components/Header'
-import { getCourt, createBooking } from '../services/api'
-import { courts as mockCourts } from '../data/mockData'
+
+const API = import.meta.env.VITE_API_URL || '/api'
 
 export default function BookingForm() {
   const [searchParams] = useSearchParams()
@@ -37,10 +38,12 @@ export default function BookingForm() {
   useEffect(() => {
     async function load() {
       try {
-        const data = await getCourt(courtId)
-        setCourt(data)
+        // 5 second timeout ke sath court data fetch karo
+        const res = await axios.get(`${API}/courts/${courtId}`, { timeout: 5000 })
+        setCourt(res.data?.data)
       } catch {
-        setCourt(mockCourts.find(c => c.id === courtId) || null)
+        // Agar backend so raha hai, toh basic info set karo taake form load ho
+        setCourt({ id: courtId, name: 'Court', pricePerHour: 0 })
       }
     }
     if (courtId) load()
@@ -57,7 +60,10 @@ export default function BookingForm() {
   if (!court) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-500">Loading...</p>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600 mx-auto mb-3"></div>
+          <p className="text-gray-500">Loading booking form...</p>
+        </div>
       </div>
     )
   }
@@ -123,7 +129,11 @@ export default function BookingForm() {
       formData.append('email', form.email)
       formData.append('paymentScreenshot', paymentFile)
 
-      const result = await createBooking(formData)
+      // Direct axios call with 60s timeout (kyunki image upload thoda time leta hai)
+      const result = await axios.post(`${API}/bookings`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60000
+      })
 
       navigate('/success', {
         state: {
@@ -133,8 +143,8 @@ export default function BookingForm() {
           name: form.name,
           mobile: form.mobile,
           amount: court.pricePerHour,
-          bookingId: result.data?.bookingId || result.data?.id,
-          qrCode: result.data?.qrCode
+          bookingId: result.data?.data?.bookingId || result.data?.data?.id,
+          qrCode: result.data?.data?.qrCode
         }
       })
     } catch (err) {

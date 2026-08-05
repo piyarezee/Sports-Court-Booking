@@ -17,7 +17,7 @@ export default function SlotSelection() {
   const [slots, setSlots] = useState([])
   const [loading, setLoading] = useState(true)
   
-  const [duration, setDuration] = useState(1) // Default 1 hour
+  const [duration, setDuration] = useState(1)
   const [selectedStart, setSelectedStart] = useState(null)
   const [error, setError] = useState('')
 
@@ -44,9 +44,8 @@ export default function SlotSelection() {
     setError('')
     const startIndex = slots.findIndex(s => s.start === startSlot)
     
-    // Check if selected duration slots are available
     for (let i = 0; i < duration; i++) {
-      if (startIndex + i >= slots.length) {
+      if (!slots[startIndex + i] || startIndex + i >= slots.length) {
         setError('Cannot book this duration, court closes soon.')
         return
       }
@@ -64,7 +63,7 @@ export default function SlotSelection() {
     
     const startIndex = slots.findIndex(s => s.start === selectedStart)
     const endSlotObj = slots[startIndex + duration - 1]
-    const endTime = endSlotObj.end // e.g., "14:00"
+    const endTime = endSlotObj ? endSlotObj.end : `${String(Number(selectedStart.split(':')[0]) + 1).padStart(2, '0')}:00`
     
     navigate(`/book?court=${courtId}&date=${date}&slotStart=${selectedStart}&slotEnd=${endTime}&duration=${duration}`)
   }
@@ -79,7 +78,6 @@ export default function SlotSelection() {
         <Header title="Select Slot" showBack backTo={`/court/${courtId}`} />
 
         <main className="px-4 py-5">
-          {/* Date & Court Info */}
           <div className="bg-primary-600 text-white p-4 rounded-2xl mb-6 shadow-md">
             <h2 className="text-lg font-bold">{court?.name || 'Loading Court...'}</h2>
             <p className="text-primary-100 text-sm flex items-center gap-1.5 mt-1">
@@ -90,7 +88,6 @@ export default function SlotSelection() {
             </p>
           </div>
 
-          {/* Duration Selector */}
           <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6">
             <h3 className="font-semibold text-gray-800 mb-3 text-sm">Select Duration</h3>
             <div className="grid grid-cols-3 gap-2">
@@ -158,7 +155,6 @@ export default function SlotSelection() {
           )}
         </main>
 
-        {/* Sticky Bottom Button */}
         {!loading && (
           <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 safe-area-bottom">
             <div className="max-w-lg mx-auto">

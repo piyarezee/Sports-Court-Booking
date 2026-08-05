@@ -6,23 +6,25 @@ import Header from '../components/Header'
 const API = import.meta.env.VITE_API_URL || '/api'
 
 export default function SlotSelection() {
-  const { id } = useParams(); // Court ID URL se nikal rahe hain (e.g., /court/2/slots)
+  const { id } = useParams();
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
 
-  const courtId = id; // Ab courtId null nahi hogi
+  const courtId = id;
   const date = searchParams.get('date')
 
   const [court, setCourt] = useState(null)
   const [slots, setSlots] = useState([])
-  const [selectedSlot, setSelectedSlot] = useState(null)
   const [loading, setLoading] = useState(true)
+  
+  const [duration, setDuration] = useState(1) // Default 1 hour
+  const [selectedStart, setSelectedStart] = useState(null)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     async function loadData() {
       setLoading(true)
       try {
-        // Direct backend se is court aur date ki slots mangwaya
         const response = await axios.get(`${API}/courts/${courtId}/slots?date=${date}`)
         if (response.data?.data) {
           setCourt(response.data.data.court)
@@ -38,9 +40,33 @@ export default function SlotSelection() {
     if (courtId && date) loadData()
   }, [courtId, date])
 
+  const handleSlotClick = (startSlot) => {
+    setError('')
+    const startIndex = slots.findIndex(s => s.start === startSlot)
+    
+    // Check if selected duration slots are available
+    for (let i = 0; i < duration; i++) {
+      if (startIndex + i >= slots.length) {
+        setError('Cannot book this duration, court closes soon.')
+        return
+      }
+      if (slots[startIndex + i].isBooked) {
+        setError(`Slot ${slots[startIndex + i].start} is already booked.`)
+        return
+      }
+    }
+    
+    setSelectedStart(startSlot)
+  }
+
   const handleContinue = () => {
-    if (!selectedSlot) return
-    navigate(`/book?court=${courtId}&date=${date}&slot=${selectedSlot}`)
+    if (!selectedStart) return
+    
+    const startIndex = slots.findIndex(s => s.start === selectedStart)
+    const endSlotObj = slots[startIndex + duration - 1]
+    const endTime = endSlotObj.end // e.g., "14:00"
+    
+    navigate(`/book?court=${courtId}&date=${date}&slotStart=${selectedStart}&slotEnd=${endTime}&duration=${duration}`)
   }
 
   const formattedDate = new Date(date).toLocaleDateString('en-PK', {
@@ -64,10 +90,36 @@ export default function SlotSelection() {
             </p>
           </div>
 
-          <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          {/* Duration Selector */}
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6">
+            <h3 className="font-semibold text-gray-800 mb-3 text-sm">Select Duration</h3>
+            <div className="grid grid-cols-3 gap-2">
+              {[1, 2, 3].map(h => (
+                <button
+                  key={h}
+                  onClick={() => { setDuration(h); setSelectedStart(null); setError('') }}
+                  className={`py-2 rounded-xl text-sm font-bold transition-all ${
+                    duration === h 
+                      ? 'bg-primary-600 text-white shadow-md' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {h} Hour{h > 1 ? 's' : ''}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
             <span className="w-1.5 h-5 bg-primary-600 rounded-full"></span>
             Available Time Slots
           </h3>
+
+          {error && (
+            <div className="bg-red-50 text-red-600 p-3 rounded-xl mb-4 text-sm font-medium text-center">
+              {error}
+            </div>
+          )}
 
           {loading ? (
             <div className="text-center py-10">
@@ -75,19 +127,18 @@ export default function SlotSelection() {
               <p className="text-gray-500 mt-3 text-sm">Fetching available slots...</p>
             </div>
           ) : (
-            /* Slots Grid - Backend se aayi hui real slots */
             <div className="grid grid-cols-3 gap-3">
               {slots.length === 0 ? (
                 <p className="text-center text-gray-500 col-span-3 py-6">No slots available for this date.</p>
               ) : (
                 slots.map(slot => {
                   const isBooked = slot.isBooked
-                  const isSelected = selectedSlot === slot.start
+                  const isSelected = selectedStart === slot.start
 
                   return (
                     <button
                       key={slot.id}
-                      onClick={() => !isBooked && setSelectedSlot(slot.start)}
+                      onClick={() => !isBooked && handleSlotClick(slot.start)}
                       disabled={isBooked}
                       className={`py-3 rounded-xl text-center text-sm font-semibold transition-all duration-200
                         ${isBooked 
@@ -113,10 +164,10 @@ export default function SlotSelection() {
             <div className="max-w-lg mx-auto">
               <button
                 onClick={handleContinue}
-                disabled={!selectedSlot}
-                className={`w-full btn-primary text-center ${!selectedSlot ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={!selectedStart}
+                className={`w-full btn-primary text-center ${!selectedStart ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                {selectedSlot ? `Proceed to Book (${selectedSlot})` : 'Select a Time Slot'}
+                {selectedStart ? `Proceed to Book (${duration} Hr)` : 'Select a Start Time'}
               </button>
             </div>
           </div>

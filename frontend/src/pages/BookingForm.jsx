@@ -10,8 +10,12 @@ export default function BookingForm() {
 
   const courtId = searchParams.get('court')
   const date = searchParams.get('date')
-  const slotStart = searchParams.get('slotStart')
-  const slotEnd = searchParams.get('slotEnd')
+  
+  // Fallback added: agar slotStart na mile, toh slot use kare
+  const slotStart = searchParams.get('slotStart') || searchParams.get('slot')
+  
+  // Fallback for slotEnd
+  const slotEnd = searchParams.get('slotEnd') || (slotStart ? `${String(Number(slotStart.split(':')[0]) + 1).padStart(2, '0')}:00` : '')
   const duration = parseInt(searchParams.get('duration') || '1')
 
   const [court, setCourt] = useState(null)
@@ -212,4 +216,48 @@ export default function BookingForm() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
-            <input
+            <input type="email" name="email" value={form.email} onChange={handleChange}
+              placeholder="you@example.com"
+              className={`input-field ${errors.email ? 'border-red-400' : ''}`} />
+            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Payment Screenshot</label>
+            <p className="text-xs text-gray-500 mb-2">Transfer Rs. {court.pricePerHour * duration} and upload screenshot</p>
+
+            {!preview ? (
+              <label className={`flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-xl cursor-pointer transition hover:bg-gray-50 ${errors.payment ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span className="text-sm text-gray-500">Tap to upload screenshot</span>
+                <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+              </label>
+            ) : (
+              <div className="relative">
+                <img src={preview} alt="Payment" className="w-full h-48 object-cover rounded-xl border" />
+                <button type="button" onClick={() => { setPaymentFile(null); setPreview(null) }}
+                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+            {errors.payment && <p className="text-red-500 text-xs mt-1">{errors.payment}</p>}
+          </div>
+
+          <button type="submit" disabled={submitting}
+            className={`w-full btn-primary mt-2 ${submitting ? 'opacity-70' : ''}`}>
+            {submitting ? 'Submitting...' : 'Submit Booking'}
+          </button>
+        </form>
+
+        <p className="text-center text-xs text-gray-400 mt-4">
+          Your booking will be confirmed after admin approval
+        </p>
+      </main>
+    </div>
+  )
+}

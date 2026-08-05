@@ -10,7 +10,9 @@ export default function BookingForm() {
 
   const courtId = searchParams.get('court')
   const date = searchParams.get('date')
-  const slot = searchParams.get('slot')
+  const slotStart = searchParams.get('slotStart')
+  const slotEnd = searchParams.get('slotEnd')
+  const duration = parseInt(searchParams.get('duration') || '1')
 
   const [court, setCourt] = useState(null)
   const [form, setForm] = useState({ name: '', mobile: '', email: '' })
@@ -19,7 +21,6 @@ export default function BookingForm() {
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
   
-  // 15-minute timer state (900 seconds)
   const [timeLeft, setTimeLeft] = useState(900)
 
   useEffect(() => {
@@ -46,9 +47,9 @@ export default function BookingForm() {
     if (courtId) load()
   }, [courtId])
 
-  if (!courtId || !date || !slot) {
+  if (!courtId || !date || !slotStart) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center">
         <p className="text-gray-500">Invalid booking data</p>
       </div>
     )
@@ -56,11 +57,8 @@ export default function BookingForm() {
 
   if (!court) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600 mx-auto mb-3"></div>
-          <p className="text-gray-500">Loading...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-500">Loading...</p>
       </div>
     )
   }
@@ -120,23 +118,23 @@ export default function BookingForm() {
       const formData = new FormData()
       formData.append('courtId', courtId)
       formData.append('date', date)
-      formData.append('slotStart', slot)
+      formData.append('slotStart', slotStart)
+      formData.append('slotEnd', slotEnd)
       formData.append('customerName', form.name)
       formData.append('mobile', form.mobile)
       formData.append('email', form.email)
       formData.append('paymentScreenshot', paymentFile)
 
-      // Using the original API function which handles FormData perfectly
       const result = await createBooking(formData)
 
       navigate('/success', {
         state: {
           courtName: court.name,
           date: formattedDate,
-          slot: `${slot} - ${String(Number(slot.split(':')[0]) + 1).padStart(2, '0')}:00`,
+          slot: `${slotStart} - ${slotEnd}`,
           name: form.name,
           mobile: form.mobile,
-          amount: court.pricePerHour,
+          amount: court.pricePerHour * duration,
           bookingId: result.data?.bookingId || result.data?.id,
           qrCode: result.data?.qrCode
         }
@@ -154,108 +152,64 @@ export default function BookingForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex justify-center">
-      <div className="w-full max-w-lg bg-gray-50 shadow-xl min-h-screen relative pb-28">
-        <Header title="Complete Booking" showBack backTo={`/court/${courtId}/slots?date=${date}`} />
+    <div className="min-h-screen bg-gray-50 pb-8">
+      <Header title="Complete Booking" showBack backTo={`/court/${courtId}/slots?date=${date}`} />
 
-        <main className="px-4 py-5">
-          {/* Timer Warning */}
-          <div className={`flex items-center justify-center gap-2 p-3 mb-5 rounded-xl text-sm font-medium ${timeLeft < 60 ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Time remaining to complete booking: {formattedTime}
-          </div>
+      <main className="max-w-lg mx-auto px-4 pt-5">
+        <div className={`flex items-center justify-center gap-2 p-3 mb-5 rounded-lg text-sm font-medium ${timeLeft < 60 ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Time remaining to complete booking: {formattedTime}
+        </div>
 
-          {/* Booking Summary */}
-          <div className="bg-primary-600 text-white p-4 rounded-2xl mb-6 shadow-md">
-            <h3 className="font-semibold text-lg mb-2">Booking Summary</h3>
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span className="text-primary-100">Court</span>
-                <span className="font-medium">{court.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-primary-100">Date</span>
-                <span className="font-medium">{formattedDate}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-primary-100">Time</span>
-                <span className="font-medium">{slot}</span>
-              </div>
-              <div className="flex justify-between pt-2 border-t border-primary-400/50 mt-2">
-                <span className="text-primary-100 font-medium">Amount</span>
-                <span className="font-bold text-xl">Rs. {court.pricePerHour}</span>
-              </div>
+        <div className="card mb-5 bg-primary-50 border-primary-100">
+          <h3 className="font-semibold text-primary-900 mb-2">Booking Summary</h3>
+          <div className="space-y-1 text-sm">
+            <div className="flex justify-between">
+              <span className="text-primary-700">Court</span>
+              <span className="font-medium text-primary-900">{court.name}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-primary-700">Date</span>
+              <span className="font-medium text-primary-900">{formattedDate}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-primary-700">Time</span>
+              <span className="font-medium text-primary-900">{slotStart} - {slotEnd}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-primary-700">Duration</span>
+              <span className="font-medium text-primary-900">{duration} Hour(s)</span>
+            </div>
+            <div className="flex justify-between pt-2 border-t border-primary-200">
+              <span className="text-primary-700 font-medium">Total Amount</span>
+              <span className="font-bold text-primary-900 text-lg">Rs. {court.pricePerHour * duration}</span>
             </div>
           </div>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {errors.form && (
-              <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{errors.form}</p>
-            )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {errors.form && (
+            <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{errors.form}</p>
+          )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
-              <input type="text" name="name" value={form.name} onChange={handleChange}
-                placeholder="Enter your full name"
-                className={`input-field ${errors.name ? 'border-red-400' : ''}`} />
-              {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
+            <input type="text" name="name" value={form.name} onChange={handleChange}
+              placeholder="Enter your full name"
+              className={`input-field ${errors.name ? 'border-red-400' : ''}`} />
+            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Mobile Number</label>
-              <input type="tel" name="mobile" value={form.mobile} onChange={handleChange}
-                placeholder="03XXXXXXXXX"
-                className={`input-field ${errors.mobile ? 'border-red-400' : ''}`} />
-              {errors.mobile && <p className="text-red-500 text-xs mt-1">{errors.mobile}</p>}
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Mobile Number</label>
+            <input type="tel" name="mobile" value={form.mobile} onChange={handleChange}
+              placeholder="03XXXXXXXXX"
+              className={`input-field ${errors.mobile ? 'border-red-400' : ''}`} />
+            {errors.mobile && <p className="text-red-500 text-xs mt-1">{errors.mobile}</p>}
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
-              <input type="email" name="email" value={form.email} onChange={handleChange}
-                placeholder="you@example.com"
-                className={`input-field ${errors.email ? 'border-red-400' : ''}`} />
-              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Payment Screenshot</label>
-              <p className="text-xs text-gray-500 mb-2">Transfer Rs. {court.pricePerHour} and upload screenshot</p>
-
-              {!preview ? (
-                <label className={`flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-xl cursor-pointer transition hover:bg-gray-50 ${errors.payment ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span className="text-sm text-gray-500">Tap to upload screenshot</span>
-                  <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-                </label>
-              ) : (
-                <div className="relative">
-                  <img src={preview} alt="Payment" className="w-full h-48 object-cover rounded-xl border" />
-                  <button type="button" onClick={() => { setPaymentFile(null); setPreview(null) }}
-                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              )}
-              {errors.payment && <p className="text-red-500 text-xs mt-1">{errors.payment}</p>}
-            </div>
-
-            <button type="submit" disabled={submitting}
-              className={`w-full btn-primary mt-2 ${submitting ? 'opacity-70' : ''}`}>
-              {submitting ? 'Submitting...' : 'Submit Booking'}
-            </button>
-          </form>
-
-          <p className="text-center text-xs text-gray-400 mt-4">
-            Your booking will be confirmed after admin approval
-          </p>
-        </main>
-      </div>
-    </div>
-  )
-}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+            <input

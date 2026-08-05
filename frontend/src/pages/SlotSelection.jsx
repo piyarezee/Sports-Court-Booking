@@ -1,4 +1,4 @@
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams, useNavigate, useParams } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import Header from '../components/Header'
@@ -6,10 +6,11 @@ import Header from '../components/Header'
 const API = import.meta.env.VITE_API_URL || '/api'
 
 export default function SlotSelection() {
+  const { id } = useParams(); // Court ID URL se nikal rahe hain (e.g., /court/2/slots)
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
 
-  const courtId = searchParams.get('court')
+  const courtId = id; // Ab courtId null nahi hogi
   const date = searchParams.get('date')
 
   const [court, setCourt] = useState(null)
@@ -21,7 +22,7 @@ export default function SlotSelection() {
     async function loadData() {
       setLoading(true)
       try {
-        // Direct backend se is court aur date ki slots mangwaya (Timeout hata diya)
+        // Direct backend se is court aur date ki slots mangwaya
         const response = await axios.get(`${API}/courts/${courtId}/slots?date=${date}`)
         if (response.data?.data) {
           setCourt(response.data.data.court)
@@ -71,33 +72,37 @@ export default function SlotSelection() {
           {loading ? (
             <div className="text-center py-10">
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600 mx-auto"></div>
-              <p className="text-gray-500 mt-3 text-sm">Waking up server & fetching slots...</p>
+              <p className="text-gray-500 mt-3 text-sm">Fetching available slots...</p>
             </div>
           ) : (
             /* Slots Grid - Backend se aayi hui real slots */
             <div className="grid grid-cols-3 gap-3">
-              {slots.map(slot => {
-                const isBooked = slot.isBooked
-                const isSelected = selectedSlot === slot.start
+              {slots.length === 0 ? (
+                <p className="text-center text-gray-500 col-span-3 py-6">No slots available for this date.</p>
+              ) : (
+                slots.map(slot => {
+                  const isBooked = slot.isBooked
+                  const isSelected = selectedSlot === slot.start
 
-                return (
-                  <button
-                    key={slot.id}
-                    onClick={() => !isBooked && setSelectedSlot(slot.start)}
-                    disabled={isBooked}
-                    className={`py-3 rounded-xl text-center text-sm font-semibold transition-all duration-200
-                      ${isBooked 
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed line-through' 
-                        : isSelected 
-                          ? 'bg-primary-600 text-white shadow-md scale-105' 
-                          : 'bg-white border border-gray-200 text-gray-700 hover:border-primary-400 hover:bg-primary-50'
-                      }`
-                    }
-                  >
-                    {slot.start}
-                  </button>
-                )
-              })}
+                  return (
+                    <button
+                      key={slot.id}
+                      onClick={() => !isBooked && setSelectedSlot(slot.start)}
+                      disabled={isBooked}
+                      className={`py-3 rounded-xl text-center text-sm font-semibold transition-all duration-200
+                        ${isBooked 
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed line-through' 
+                          : isSelected 
+                            ? 'bg-primary-600 text-white shadow-md scale-105' 
+                            : 'bg-white border border-gray-200 text-gray-700 hover:border-primary-400 hover:bg-primary-50'
+                        }`
+                      }
+                    >
+                      {slot.start}
+                    </button>
+                  )
+                })
+              )}
             </div>
           )}
         </main>

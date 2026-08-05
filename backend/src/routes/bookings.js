@@ -68,7 +68,7 @@ router.post('/', upload.single('paymentScreenshot'), async (req, res) => {
     try {
       const uploaded = await driveService.uploadFile(
         req.file.path,
-        `payment-${mobile}-${Date.now()}${path.extname(file.originalname)}`
+        `payment-${mobile}-${Date.now()}${path.extname(req.file.originalname)}` // Yahan req.file fix kiya
       );
       paymentUrl = uploaded.webContentLink || uploaded.webViewLink;
     } catch (driveErr) {
@@ -79,7 +79,6 @@ router.post('/', upload.single('paymentScreenshot'), async (req, res) => {
     const bookingId = `SCB-${Date.now()}`;
     const qrCodeDataUrl = await QRCode.toDataURL(bookingId, { width: 200 });
 
-    // Agar slotEnd na aaye, to 1 ghanta add karke bana lein (fallback)
     const finalSlotEnd = slotEnd || `${String(Number(slotStart.split(':')[0]) + 1).padStart(2, '0')}:00`;
 
     await sheetsService.upsertCustomer({
@@ -95,11 +94,11 @@ router.post('/', upload.single('paymentScreenshot'), async (req, res) => {
       courtName: court.name,
       date,
       slotStart,
-      slotEnd: finalSlotEnd, // Yahan frontend se aayi value use hogi
+      slotEnd: finalSlotEnd,
       customerName,
       mobile: mobile.replace(/[\s-]/g, ''),
       email,
-      amount: court.pricePerHour, // Note: Agar amount backend par calculate karna hai, toh duration bhi bhejni hogi
+      amount: court.pricePerHour,
       paymentScreenshot: paymentUrl
     });
 

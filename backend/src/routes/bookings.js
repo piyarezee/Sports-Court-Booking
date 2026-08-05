@@ -1,14 +1,14 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const QRCode = require('qrcode'); // Added QR Code package
+const QRCode = require('qrcode');
 const sheetsService = require('../services/sheetsService');
 const driveService = require('../services/driveService');
 const emailService = require('../services/emailService');
 
 const router = express.Router();
 
-// Multer config - store temporarily in uploads/
+// Multer config
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, path.join(__dirname, '../../uploads'));
@@ -21,7 +21,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
@@ -34,13 +34,12 @@ const upload = multer({
 // POST /api/bookings - Create new booking
 router.post('/', upload.single('paymentScreenshot'), async (req, res) => {
   try {
-    const { courtId, date, slotStart, customerName, mobile, email } = req.body;
+    const { courtId, date, slotStart, slotEnd, customerName, mobile, email } = req.body;
 
-    // Validation
     if (!courtId || !date || !slotStart || !customerName || !mobile || !email) {
       return res.status(400).json({
         success: false,
-        error: 'Missing required fields: courtId, date, slotStart, customerName, mobile, email'
+        error: 'Missing required fields'
       });
     }
 
@@ -51,7 +50,6 @@ router.post('/', upload.single('paymentScreenshot'), async (req, res) => {
       });
     }
 
-    // Get court details
     const court = await sheetsService.getCourtById(courtId);
     if (!court) {
       return res.status(404).json({ success: false, error: 'Court not found' });
@@ -66,7 +64,6 @@ router.post('/', upload.single('paymentScreenshot'), async (req, res) => {
       });
     }
 
-    // Upload payment screenshot to Google Drive
     let paymentUrl = '';
     try {
       const uploaded = await driveService.uploadFile(
@@ -79,22 +76,17 @@ router.post('/', upload.single('paymentScreenshot'), async (req, res) => {
       paymentUrl = `/uploads/${req.file.filename}`;
     }
 
-    // Generate Booking ID (e.g., SCB-1718482901)
     const bookingId = `SCB-${Date.now()}`;
-    
-    // Generate QR Code as Data URL (contains Booking ID)
     const qrCodeDataUrl = await QRCode.toDataURL(bookingId, { width: 200 });
 
-    const slotEnd = `${String(Number(slotStart.split(':')[0]) + 1).padStart(2, '0')}:00`;
+    const finalSlotEnd = slotEnd || `${String(Number(slotStart.split(':')[0]) + 1).padStart(2, '0')}:00`;
 
-    // Upsert customer
     await sheetsService.upsertCustomer({
       name: customerName,
       mobile: mobile.replace(/[\s-]/g, ''),
       email
     });
 
-    // Create booking (passing bookingId and qrCode)
     const booking = await sheetsService.createBooking({
       bookingId,
       qrCode: qrCodeDataUrl,
@@ -102,7 +94,7 @@ router.post('/', upload.single('paymentScreenshot'), async (req, res) => {
       courtName: court.name,
       date,
       slotStart,
-      slotEnd,
+      slotEnd: finalSlotEnd,
       customerName,
       mobile: mobile.replace(/[\s-]/g, ''),
       email,
@@ -110,34 +102,36 @@ router.post('/', upload.single('paymentScreenshot'), async (req, res) => {
       paymentScreenshot: paymentUrl
     });
 
-    // Send email (passing bookingId and qrCode)
+    // 1. Turant Frontend ko Success bhej do (taaki QR code dikh jaye)
+    res.status(201).json({
+      success: true,
+      message: 'Booking submitted successfully. Pending admin approval.',
+      data: booking
+    });
+
+    // 2. Ab background mein Email bhejo (Agar fail ho, toh user ko pata bhi nahi chalega)
     try {
       await emailService.sendBookingSubmittedEmail({
         to: email,
         name: customerName,
         courtName: court.name,
         date,
-        slot: `${slotStart} - ${slotEnd}`,
+        slot: `${slotStart} - ${finalSlotEnd}`,
         amount: court.pricePerHour,
         bookingId: bookingId,
         qrCode: qrCodeDataUrl
       });
     } catch (emailErr) {
-      console.error('Email send failed:', emailErr.message);
+      console.error('Background Email send failed:', emailErr.message);
     }
 
-    res.status(201).json({
-      success: true,
-      message: 'Booking submitted successfully. Pending admin approval.',
-      data: booking
-    });
   } catch (err) {
     console.error('Create booking error:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// GET /api/bookings - List all bookings (for admin later)
+// GET /api/bookings
 router.get('/', async (req, res) => {
   try {
     const bookings = await sheetsService.getBookings();

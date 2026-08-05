@@ -53,10 +53,7 @@ router.post('/staff/login', (req, res) => {
 router.get('/staff/today-bookings', staffAuth, async (req, res) => {
   try {
     const bookings = await sheetsService.getBookings();
-    
-    // Sirf Approved bookings bhej rahe hain (Date filter hata diya timezone issue ki wajah se)
     const approvedBookings = bookings.filter(b => b.status === 'approved');
-    
     res.json({ success: true, data: approvedBookings });
   } catch (err) {
     console.error(err);
@@ -126,7 +123,13 @@ router.patch('/bookings/:id/status', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Status must be approved or rejected' });
     }
 
+    // 1. Sheet mein status update karo
     const updated = await sheetsService.updateBookingStatus(id, status, notes || '');
+
+    // 2. Turant Admin ko response bhej do taake UI stuck na ho
+    res.json({ success: true, message: `Booking ${status}`, data: updated });
+
+    // 3. Ab background mein customer ko email bhejo
     const allBookings = await sheetsService.getBookings();
     const booking = allBookings.find(b => b.id === id);
 
@@ -147,7 +150,6 @@ router.patch('/bookings/:id/status', async (req, res) => {
       }
     }
 
-    res.json({ success: true, message: `Booking ${status}`, data: updated });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: err.message });

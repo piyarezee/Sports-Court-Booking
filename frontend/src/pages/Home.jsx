@@ -10,10 +10,20 @@ export default function Home() {
   useEffect(() => {
     async function load() {
       try {
-        const data = await getCourts()
-        setCourts(data)
+        const response = await getCourts()
+        // Ensure response is an array, if not, fallback to mock
+        const data = Array.isArray(response) ? response : (response?.data || [])
+        
+        // Filter out any courts that don't have a valid ID
+        const validCourts = data.filter(c => c && c.id != null)
+        
+        if (validCourts.length > 0) {
+          setCourts(validCourts)
+        } else {
+          setCourts(mockCourts.filter(c => c && c.id != null))
+        }
       } catch {
-        setCourts(mockCourts)
+        setCourts(mockCourts.filter(c => c && c.id != null))
       } finally {
         setLoading(false)
       }
@@ -55,53 +65,57 @@ export default function Home() {
             </div>
           ) : (
             <div className="space-y-5">
-              {courts.map(court => (
-                <Link 
-                  to={`/court/${court.id}`} 
-                  key={court.id}
-                  className="block bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
-                >
-                  {/* Court Image Container */}
-                  <div className="relative h-44 w-full bg-gray-100 overflow-hidden">
-                    <img 
-                      src={court.image} 
-                      alt={court.name} 
-                      className="w-full h-full object-cover"
-                    />
-                    {/* Gradient Overlay for better text visibility */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
-                    
-                    <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-bold text-primary-700 shadow-sm">
-                      Rs. {court.pricePerHour}/hr
+              {courts.length === 0 ? (
+                <p className="text-center text-gray-500 py-10">No courts available at the moment.</p>
+              ) : (
+                courts.map(court => (
+                  <Link 
+                    to={`/court/${String(court.id)}`} 
+                    key={court.id}
+                    className="block bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+                  >
+                    {/* Court Image Container */}
+                    <div className="relative h-44 w-full bg-gray-100 overflow-hidden">
+                      <img 
+                        src={court.image} 
+                        alt={court.name} 
+                        className="w-full h-full object-cover"
+                      />
+                      {/* Gradient Overlay for better text visibility */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
+                      
+                      <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-bold text-primary-700 shadow-sm">
+                        Rs. {court.pricePerHour}/hr
+                      </div>
                     </div>
-                  </div>
-                  
-                  {/* Court Info */}
-                  <div className="p-4">
-                    <div className="flex justify-between items-start mb-1">
-                      <h3 className="font-bold text-lg text-gray-900">{court.name}</h3>
-                      <span className="text-xs bg-primary-50 text-primary-700 px-2 py-1 rounded-full font-semibold border border-primary-100">
-                        {court.type}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-500 flex items-center gap-1">
-                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                      </svg>
-                      {court.location}
-                    </p>
                     
-                    <div className="mt-3 flex items-center gap-2 flex-wrap">
-                      {court.amenities?.slice(0, 3).map(item => (
-                        <span key={item} className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md font-medium">
-                          {item}
+                    {/* Court Info */}
+                    <div className="p-4">
+                      <div className="flex justify-between items-start mb-1">
+                        <h3 className="font-bold text-lg text-gray-900">{court.name}</h3>
+                        <span className="text-xs bg-primary-50 text-primary-700 px-2 py-1 rounded-full font-semibold border border-primary-100">
+                          {court.type}
                         </span>
-                      ))}
+                      </div>
+                      <p className="text-sm text-gray-500 flex items-center gap-1">
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        {court.location}
+                      </p>
+                      
+                      <div className="mt-3 flex items-center gap-2 flex-wrap">
+                        {court.amenities?.slice(0, 3).map(item => (
+                          <span key={item} className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md font-medium">
+                            {item}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                ))
+              )}
             </div>
           )}
         </main>

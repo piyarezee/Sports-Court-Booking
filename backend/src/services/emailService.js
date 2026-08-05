@@ -1,12 +1,20 @@
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
+// Force IPv4 to bypass Render's IPv6 connection issues (ENETUNREACH Fix)
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true, // true for 465, false for other ports
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_APP_PASSWORD
-  }
+  },
+  connectionTimeout: 60000, // 60 seconds
+  greetingTimeout: 60000,
+  socketTimeout: 60000,
+  // Force IPv4
+  family: 4
 });
 
 /**

@@ -10,11 +10,7 @@ export default function BookingForm() {
 
   const courtId = searchParams.get('court')
   const date = searchParams.get('date')
-  
-  // Fallback added: agar slotStart na mile, toh slot use kare
   const slotStart = searchParams.get('slotStart') || searchParams.get('slot')
-  
-  // Fallback for slotEnd
   const slotEnd = searchParams.get('slotEnd') || (slotStart ? `${String(Number(slotStart.split(':')[0]) + 1).padStart(2, '0')}:00` : '')
   const duration = parseInt(searchParams.get('duration') || '1')
 
@@ -24,7 +20,6 @@ export default function BookingForm() {
   const [preview, setPreview] = useState(null)
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
-  
   const [timeLeft, setTimeLeft] = useState(900)
 
   useEffect(() => {
@@ -200,25 +195,19 @@ export default function BookingForm() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
-            <input type="text" name="name" value={form.name} onChange={handleChange}
-              placeholder="Enter your full name"
-              className={`input-field ${errors.name ? 'border-red-400' : ''}`} />
+            <input type="text" name="name" value={form.name} onChange={handleChange} placeholder="Enter your full name" className={`input-field ${errors.name ? 'border-red-400' : ''}`} />
             {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Mobile Number</label>
-            <input type="tel" name="mobile" value={form.mobile} onChange={handleChange}
-              placeholder="03XXXXXXXXX"
-              className={`input-field ${errors.mobile ? 'border-red-400' : ''}`} />
+            <input type="tel" name="mobile" value={form.mobile} onChange={handleChange} placeholder="03XXXXXXXXX" className={`input-field ${errors.mobile ? 'border-red-400' : ''}`} />
             {errors.mobile && <p className="text-red-500 text-xs mt-1">{errors.mobile}</p>}
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
-            <input type="email" name="email" value={form.email} onChange={handleChange}
-              placeholder="you@example.com"
-              className={`input-field ${errors.email ? 'border-red-400' : ''}`} />
+            <input type="email" name="email" value={form.email} onChange={handleChange} placeholder="you@example.com" className={`input-field ${errors.email ? 'border-red-400' : ''}`} />
             {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
           </div>
 
@@ -237,8 +226,7 @@ export default function BookingForm() {
             ) : (
               <div className="relative">
                 <img src={preview} alt="Payment" className="w-full h-48 object-cover rounded-xl border" />
-                <button type="button" onClick={() => { setPaymentFile(null); setPreview(null) }}
-                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5">
+                <button type="button" onClick={() => { setPaymentFile(null); setPreview(null) }} className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -248,8 +236,7 @@ export default function BookingForm() {
             {errors.payment && <p className="text-red-500 text-xs mt-1">{errors.payment}</p>}
           </div>
 
-          <button type="submit" disabled={submitting}
-            className={`w-full btn-primary mt-2 ${submitting ? 'opacity-70' : ''}`}>
+          <button type="submit" disabled={submitting} className={`w-full btn-primary mt-2 ${submitting ? 'opacity-70' : ''}`}>
             {submitting ? 'Submitting...' : 'Submit Booking'}
           </button>
         </form>

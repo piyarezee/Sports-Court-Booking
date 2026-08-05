@@ -18,7 +18,6 @@ const SHEETS = {
 
 // Helper to safely format sheet range
 function getRange(sheetName, cellRange = 'A:Z') {
-  // If sheet name has space or hyphen, wrap in single quotes
   const safeName = /[\s\-]/.test(sheetName) ? `'${sheetName}'` : sheetName;
   return `${safeName}!${cellRange}`;
 }
@@ -102,7 +101,7 @@ async function getCourts() {
   return data
     .filter(c => c.is_active !== 'FALSE' && c.is_active !== 'false' && c.is_active !== '0')
     .map(c => ({
-      id: c.id,
+      id: String(c.id || '').trim(), // ID ko string bana diya
       name: c.name,
       type: c.type,
       location: c.location,
@@ -119,7 +118,8 @@ async function getCourts() {
 
 async function getCourtById(id) {
   const courts = await getCourts();
-  return courts.find(c => c.id === id) || null;
+  const cleanId = String(id || '').trim();
+  return courts.find(c => c.id === cleanId) || null;
 }
 
 // ========== BOOKINGS ==========
@@ -128,11 +128,11 @@ async function getBookings() {
   return data.map(b => ({
     id: b.booking_id || b.id,
     bookingId: b.booking_id || b.id,
-    courtId: b.court_id,
+    courtId: String(b.court_id || '').trim(), // String mein convert kar ke spaces hatayi
     courtName: b.court_name,
-    date: b.date,
-    slotStart: b.slot_start,
-    slotEnd: b.slot_end,
+    date: String(b.date || '').trim(),
+    slotStart: String(b.slot_start || '').trim(),
+    slotEnd: String(b.slot_end || '').trim(),
     customerName: b.customer_name,
     mobile: b.mobile,
     email: b.email,
@@ -147,8 +147,13 @@ async function getBookings() {
 
 async function getBookingsByDateAndCourt(courtId, date) {
   const bookings = await getBookings();
+  
+  // Dono ko String bana ke compare kiya, taake 1 (number) aur "1" (text) dono match ho jayein
+  const cleanCourtId = String(courtId || '').trim();
+  const cleanDate = String(date || '').trim();
+  
   return bookings.filter(
-    b => b.courtId === courtId && b.date === date && b.status !== 'rejected'
+    b => b.courtId === cleanCourtId && b.date === cleanDate && b.status !== 'rejected'
   );
 }
 

@@ -68,7 +68,7 @@ router.post('/', upload.single('paymentScreenshot'), async (req, res) => {
     try {
       const uploaded = await driveService.uploadFile(
         req.file.path,
-        `payment-${mobile}-${Date.now()}${path.extname(req.file.originalname)}` // Yahan req.file fix kiya
+        `payment-${mobile}-${Date.now()}${path.extname(req.file.originalname)}`
       );
       paymentUrl = uploaded.webContentLink || uploaded.webViewLink;
     } catch (driveErr) {
@@ -102,6 +102,14 @@ router.post('/', upload.single('paymentScreenshot'), async (req, res) => {
       paymentScreenshot: paymentUrl
     });
 
+    // 1. Turant Frontend ko Success bhej do (taaki QR code dikh jaye)
+    res.status(201).json({
+      success: true,
+      message: 'Booking submitted successfully. Pending admin approval.',
+      data: booking
+    });
+
+    // 2. Ab background mein Email bhejo (Agar fail ho, toh user ko pata bhi nahi chalega)
     try {
       await emailService.sendBookingSubmittedEmail({
         to: email,
@@ -114,14 +122,9 @@ router.post('/', upload.single('paymentScreenshot'), async (req, res) => {
         qrCode: qrCodeDataUrl
       });
     } catch (emailErr) {
-      console.error('Email send failed:', emailErr.message);
+      console.error('Background Email send failed:', emailErr.message);
     }
 
-    res.status(201).json({
-      success: true,
-      message: 'Booking submitted successfully. Pending admin approval.',
-      data: booking
-    });
   } catch (err) {
     console.error('Create booking error:', err);
     res.status(500).json({ success: false, error: err.message });

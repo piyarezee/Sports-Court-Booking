@@ -1,6 +1,5 @@
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import Header from '../components/Header'
 import { getCourt, createBooking } from '../services/api'
 import { courts as mockCourts } from '../data/mockData'
 
@@ -28,9 +27,7 @@ export default function BookingForm() {
       navigate(`/court/${courtId}/slots?date=${date}`)
       return;
     }
-    const timerId = setInterval(() => {
-      setTimeLeft(prev => prev - 1)
-    }, 1000);
+    const timerId = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
     return () => clearInterval(timerId);
   }, [timeLeft, courtId, date, navigate])
 
@@ -47,25 +44,14 @@ export default function BookingForm() {
   }, [courtId])
 
   if (!courtId || !date || !slotStart) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">Invalid booking data</p>
-      </div>
-    )
+    return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Invalid booking data</div>
   }
 
   if (!court) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">Loading...</p>
-      </div>
-    )
+    return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Loading...</div>
   }
 
-  const formattedDate = new Date(date).toLocaleDateString('en-PK', {
-    weekday: 'short', day: 'numeric', month: 'short'
-  })
-
+  const formattedDate = new Date(date).toLocaleDateString('en-PK', { weekday: 'short', day: 'numeric', month: 'short' })
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
   const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
@@ -79,14 +65,8 @@ export default function BookingForm() {
   const handleFileChange = (e) => {
     const file = e.target.files[0]
     if (!file) return
-    if (!file.type.startsWith('image/')) {
-      setErrors(prev => ({ ...prev, payment: 'Please upload an image file' }))
-      return
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setErrors(prev => ({ ...prev, payment: 'File size must be under 5MB' }))
-      return
-    }
+    if (!file.type.startsWith('image/')) return setErrors(prev => ({ ...prev, payment: 'Please upload an image file' }))
+    if (file.size > 5 * 1024 * 1024) return setErrors(prev => ({ ...prev, payment: 'File size must be under 5MB' }))
     setPaymentFile(file)
     setPreview(URL.createObjectURL(file))
     setErrors(prev => ({ ...prev, payment: '' }))
@@ -96,13 +76,9 @@ export default function BookingForm() {
     const newErrors = {}
     if (!form.name.trim()) newErrors.name = 'Name is required'
     if (!form.mobile.trim()) newErrors.mobile = 'Mobile number is required'
-    else if (!/^03\d{9}$/.test(form.mobile.replace(/[\s-]/g, ''))) {
-      newErrors.mobile = 'Enter valid PK mobile (03XXXXXXXXX)'
-    }
+    else if (!/^03\d{9}$/.test(form.mobile.replace(/[\s-]/g, ''))) newErrors.mobile = 'Enter valid PK mobile (03XXXXXXXXX)'
     if (!form.email.trim()) newErrors.email = 'Email is required'
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      newErrors.email = 'Enter a valid email'
-    }
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) newErrors.email = 'Enter a valid email'
     if (!paymentFile) newErrors.payment = 'Payment screenshot is required'
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -111,7 +87,6 @@ export default function BookingForm() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!validate()) return
-
     setSubmitting(true)
     try {
       const formData = new FormData()
@@ -125,126 +100,99 @@ export default function BookingForm() {
       formData.append('paymentScreenshot', paymentFile)
 
       const result = await createBooking(formData)
-
       navigate('/success', {
         state: {
-          courtName: court.name,
-          date: formattedDate,
-          slot: `${slotStart} - ${slotEnd}`,
-          name: form.name,
-          mobile: form.mobile,
-          amount: court.pricePerHour * duration,
-          bookingId: result.data?.bookingId || result.data?.id,
-          qrCode: result.data?.qrCode
+          courtName: court.name, date: formattedDate, slot: `${slotStart} - ${slotEnd}`,
+          name: form.name, mobile: form.mobile, amount: court.pricePerHour * duration,
+          bookingId: result.data?.bookingId || result.data?.id, qrCode: result.data?.qrCode
         }
       })
     } catch (err) {
-      console.error(err)
-      if (err.response?.status === 409) {
-        setErrors({ form: 'This slot is already booked. Please choose another.' })
-      } else {
-        setErrors({ form: 'Failed to submit booking. Please try again.' })
-      }
+      if (err.response?.status === 409) setErrors({ form: 'This slot is already booked. Please choose another.' })
+      else setErrors({ form: 'Failed to submit booking. Please try again.' })
     } finally {
       setSubmitting(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-8">
-      <Header title="Complete Booking" showBack backTo={`/court/${courtId}/slots?date=${date}`} />
-
-      <main className="max-w-lg mx-auto px-4 pt-5">
-        <div className={`flex items-center justify-center gap-2 p-3 mb-5 rounded-lg text-sm font-medium ${timeLeft < 60 ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          Time remaining to complete booking: {formattedTime}
+    <div className="min-h-screen bg-slate-900 text-white relative overflow-hidden pb-28">
+      <div className="absolute top-0 left-0 w-96 h-96 bg-primary-600/20 rounded-full filter blur-[120px]"></div>
+      
+      <div className="relative z-10 max-w-lg mx-auto px-4 py-5">
+        <div className="flex items-center gap-3 mb-6">
+          <button onClick={() => navigate(`/court/${courtId}/slots?date=${date}`)} className="p-2 bg-white/5 border border-white/10 rounded-full backdrop-blur-md">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+          </button>
+          <h1 className="font-bold text-lg">Complete Booking</h1>
         </div>
 
-        <div className="card mb-5 bg-primary-50 border-primary-100">
-          <h3 className="font-semibold text-primary-900 mb-2">Booking Summary</h3>
-          <div className="space-y-1 text-sm">
-            <div className="flex justify-between">
-              <span className="text-primary-700">Court</span>
-              <span className="font-medium text-primary-900">{court.name}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-primary-700">Date</span>
-              <span className="font-medium text-primary-900">{formattedDate}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-primary-700">Time</span>
-              <span className="font-medium text-primary-900">{slotStart} - {slotEnd}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-primary-700">Duration</span>
-              <span className="font-medium text-primary-900">{duration} Hour(s)</span>
-            </div>
-            <div className="flex justify-between pt-2 border-t border-primary-200">
-              <span className="text-primary-700 font-medium">Total Amount</span>
-              <span className="font-bold text-primary-900 text-lg">Rs. {court.pricePerHour * duration}</span>
-            </div>
+        <div className={`flex items-center justify-center gap-2 p-3 mb-5 rounded-xl text-sm font-medium backdrop-blur-md border ${timeLeft < 60 ? 'bg-red-500/10 text-red-400 border-red-500/30' : 'bg-amber-500/10 text-amber-400 border-amber-500/30'}`}>
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          Time remaining: {formattedTime}
+        </div>
+
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-lg mb-5">
+          <h3 className="font-semibold text-white mb-3">Booking Summary</h3>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between"><span className="text-slate-400">Court</span><span className="font-medium text-white">{court.name}</span></div>
+            <div className="flex justify-between"><span className="text-slate-400">Date</span><span className="font-medium text-white">{formattedDate}</span></div>
+            <div className="flex justify-between"><span className="text-slate-400">Time</span><span className="font-medium text-white">{slotStart} - {slotEnd}</span></div>
+            <div className="flex justify-between"><span className="text-slate-400">Duration</span><span className="font-medium text-white">{duration} Hour(s)</span></div>
+            <div className="flex justify-between pt-2 border-t border-white/10"><span className="text-slate-300 font-medium">Total Amount</span><span className="font-bold text-primary-400 text-lg">Rs. {court.pricePerHour * duration}</span></div>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {errors.form && (
-            <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{errors.form}</p>
-          )}
+          {errors.form && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/30 px-3 py-2 rounded-lg">{errors.form}</p>}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
-            <input type="text" name="name" value={form.name} onChange={handleChange} placeholder="Enter your full name" className={`input-field ${errors.name ? 'border-red-400' : ''}`} />
-            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+            <label className="block text-sm font-medium text-slate-300 mb-1.5">Full Name</label>
+            <input type="text" name="name" value={form.name} onChange={handleChange} placeholder="Enter your full name" className={`w-full bg-white/5 border ${errors.name ? 'border-red-500' : 'border-white/10'} rounded-xl py-3 px-4 text-white placeholder-slate-500 focus:outline-none focus:border-primary-500`} />
+            {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Mobile Number</label>
-            <input type="tel" name="mobile" value={form.mobile} onChange={handleChange} placeholder="03XXXXXXXXX" className={`input-field ${errors.mobile ? 'border-red-400' : ''}`} />
-            {errors.mobile && <p className="text-red-500 text-xs mt-1">{errors.mobile}</p>}
+            <label className="block text-sm font-medium text-slate-300 mb-1.5">Mobile Number</label>
+            <input type="tel" name="mobile" value={form.mobile} onChange={handleChange} placeholder="03XXXXXXXXX" className={`w-full bg-white/5 border ${errors.mobile ? 'border-red-500' : 'border-white/10'} rounded-xl py-3 px-4 text-white placeholder-slate-500 focus:outline-none focus:border-primary-500`} />
+            {errors.mobile && <p className="text-red-400 text-xs mt-1">{errors.mobile}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
-            <input type="email" name="email" value={form.email} onChange={handleChange} placeholder="you@example.com" className={`input-field ${errors.email ? 'border-red-400' : ''}`} />
-            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+            <label className="block text-sm font-medium text-slate-300 mb-1.5">Email Address</label>
+            <input type="email" name="email" value={form.email} onChange={handleChange} placeholder="you@example.com" className={`w-full bg-white/5 border ${errors.email ? 'border-red-500' : 'border-white/10'} rounded-xl py-3 px-4 text-white placeholder-slate-500 focus:outline-none focus:border-primary-500`} />
+            {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Payment Screenshot</label>
-            <p className="text-xs text-gray-500 mb-2">Transfer Rs. {court.pricePerHour * duration} and upload screenshot</p>
-
+            <label className="block text-sm font-medium text-slate-300 mb-1.5">Payment Screenshot</label>
+            <p className="text-xs text-slate-500 mb-2">Transfer Rs. {court.pricePerHour * duration} and upload screenshot</p>
             {!preview ? (
-              <label className={`flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-xl cursor-pointer transition hover:bg-gray-50 ${errors.payment ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <span className="text-sm text-gray-500">Tap to upload screenshot</span>
+              <label className={`flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-xl cursor-pointer transition hover:bg-white/5 ${errors.payment ? 'border-red-500' : 'border-white/20'}`}>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-slate-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                <span className="text-sm text-slate-400">Tap to upload screenshot</span>
                 <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
               </label>
             ) : (
               <div className="relative">
-                <img src={preview} alt="Payment" className="w-full h-48 object-cover rounded-xl border" />
+                <img src={preview} alt="Payment" className="w-full h-48 object-cover rounded-xl border border-white/10" />
                 <button type="button" onClick={() => { setPaymentFile(null); setPreview(null) }} className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </div>
             )}
-            {errors.payment && <p className="text-red-500 text-xs mt-1">{errors.payment}</p>}
+            {errors.payment && <p className="text-red-400 text-xs mt-1">{errors.payment}</p>}
           </div>
 
-          <button type="submit" disabled={submitting} className={`w-full btn-primary mt-2 ${submitting ? 'opacity-70' : ''}`}>
-            {submitting ? 'Submitting...' : 'Submit Booking'}
-          </button>
+          <div className="fixed bottom-0 left-0 right-0 bg-slate-900/80 backdrop-blur-lg border-t border-white/10 p-4 z-30">
+            <div className="max-w-lg mx-auto">
+              <button type="submit" disabled={submitting} className={`w-full py-4 rounded-xl text-center font-bold text-sm transition-all duration-300 ${submitting ? 'bg-white/10 text-slate-500' : 'bg-primary-500 text-white hover:bg-primary-600 shadow-lg shadow-primary-500/30'}`}>
+                {submitting ? 'Submitting...' : 'Submit Booking'}
+              </button>
+            </div>
+          </div>
         </form>
-
-        <p className="text-center text-xs text-gray-400 mt-4">
-          Your booking will be confirmed after admin approval
-        </p>
-      </main>
+      </div>
     </div>
   )
 }

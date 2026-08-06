@@ -72,11 +72,9 @@ export default function AdminBookings() {
       notes = prompt('Rejection reason (optional):') || ''
     }
 
-    // 1. WhatsApp Link turant kholo
     const waLink = generateWhatsAppLink(booking, status, notes)
     window.open(waLink, '_blank')
 
-    // 2. Backend update karo
     setActionLoading(booking.id)
     try {
       await axios.patch(
@@ -93,35 +91,46 @@ export default function AdminBookings() {
   }
 
   const filters = [
-    { key: 'all', label: 'All' },
+    { key: 'all', label: 'All Bookings' },
     { key: 'pending', label: 'Pending' },
     { key: 'approved', label: 'Approved' },
     { key: 'rejected', label: 'Rejected' }
   ]
 
+  // Helper to get initials for Avatar
+  const getInitials = (name) => {
+    if(!name) return '?';
+    const names = name.split(' ');
+    if (names.length === 1) return names[0].charAt(0).toUpperCase();
+    return (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase();
+  }
+
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
-          <Link to="/admin" className="p-2 -ml-2 rounded-full hover:bg-gray-100">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </Link>
-          <h1 className="font-bold text-gray-900">Bookings</h1>
+    <div className="min-h-screen bg-slate-50">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link to="/admin" className="p-2 -ml-2 rounded-full hover:bg-slate-100 transition">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </Link>
+            <h1 className="text-xl font-bold text-slate-900">Manage Bookings</h1>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-6">
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+        {/* Modern Filter Tabs */}
+        <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
           {filters.map(f => (
             <Link
               key={f.key}
               to={`/admin/bookings${f.key === 'all' ? '' : `?status=${f.key}`}`}
-              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition
+              className={`px-5 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200
                 ${statusFilter === f.key
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:border-primary-300'
+                  ? 'bg-slate-900 text-white shadow-md'
+                  : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-400 hover:text-slate-900'
                 }`}
             >
               {f.label}
@@ -132,74 +141,97 @@ export default function AdminBookings() {
         {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm">{error}</div>}
 
         {loading ? (
-          <p className="text-center text-gray-400 py-12">Loading...</p>
+          <div className="text-center py-20">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-900 mx-auto"></div>
+            <p className="text-slate-500 mt-3 text-sm">Fetching bookings...</p>
+          </div>
         ) : bookings.length === 0 ? (
-          <p className="text-center text-gray-400 py-12">No bookings found</p>
+          <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-slate-200">
+            <p className="text-slate-400 font-medium">No bookings found in this category.</p>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {bookings.map(b => (
-              <div key={b.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-5">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="font-bold text-lg text-gray-900">{b.customerName}</h3>
-                      <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
-                        <a href={`https://wa.me/${formatWhatsAppNumber(b.mobile)}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-green-600">
-                          <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              <div key={b.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden flex flex-col">
+                
+                {/* Card Header */}
+                <div className="p-5 flex items-start gap-4">
+                  <div className="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                    {getInitials(b.customerName)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start gap-2">
+                      <h3 className="font-bold text-lg text-slate-900 truncate">{b.customerName}</h3>
+                      <StatusBadge status={b.status} />
+                    </div>
+                    <div className="flex flex-col mt-1 text-sm text-slate-500 space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                        <a href={`https://wa.me/${formatWhatsAppNumber(b.mobile)}`} target="_blank" rel="noreferrer" className="hover:text-green-600 hover:underline">
                           {b.mobile}
                         </a>
                       </div>
-                      <p className="text-sm text-gray-500 mt-1">{b.email}</p>
-                    </div>
-                    <StatusBadge status={b.status} />
-                  </div>
-
-                  <div className="bg-gray-50 rounded-xl p-4 grid grid-cols-2 gap-3 text-sm mb-4">
-                    <div>
-                      <p className="text-gray-400 text-xs">Court</p>
-                      <p className="font-semibold text-gray-800">{b.courtName}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-400 text-xs">Amount</p>
-                      <p className="font-semibold text-gray-800">Rs. {b.amount}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-400 text-xs">Date</p>
-                      <p className="font-semibold text-gray-800">{b.date}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-400 text-xs">Time</p>
-                      <p className="font-semibold text-gray-800">{b.slotStart} - {b.slotEnd}</p>
+                      <div className="flex items-center gap-1.5">
+                        <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" /></svg>
+                        <span className="truncate">{b.email}</span>
+                      </div>
                     </div>
                   </div>
-
-                  {b.paymentScreenshot && (
-                    <a href={b.paymentScreenshot} target="_blank" rel="noreferrer" className="text-sm text-primary-600 hover:underline mb-3 block">
-                      View Payment Screenshot →
-                    </a>
-                  )}
-
-                  <p className="text-xs text-gray-400 mb-4">Booking ID: {b.id}</p>
-
-                  {b.status === 'pending' && (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleStatus(b, 'approved')}
-                        disabled={actionLoading === b.id}
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 rounded-xl text-sm transition disabled:opacity-50"
-                      >
-                        {actionLoading === b.id ? '...' : 'Approve & WhatsApp'}
-                      </button>
-                      <button
-                        onClick={() => handleStatus(b, 'rejected')}
-                        disabled={actionLoading === b.id}
-                        className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 rounded-xl text-sm transition disabled:opacity-50"
-                      >
-                        Reject & WhatsApp
-                      </button>
-                    </div>
-                  )}
                 </div>
+
+                {/* Card Body - Details */}
+                <div className="px-5 pb-5 flex-1">
+                  <div className="bg-slate-50 rounded-xl p-4 grid grid-cols-2 gap-4 text-sm border border-slate-100">
+                    <div className="flex flex-col">
+                      <span className="text-slate-400 text-xs mb-0.5">Court</span>
+                      <span className="font-semibold text-slate-800">{b.courtName}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-slate-400 text-xs mb-0.5">Amount</span>
+                      <span className="font-semibold text-slate-800">Rs. {b.amount}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-slate-400 text-xs mb-0.5">Date</span>
+                      <span className="font-semibold text-slate-800">{b.date}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-slate-400 text-xs mb-0.5">Time Slot</span>
+                      <span className="font-semibold text-slate-800">{b.slotStart} - {b.slotEnd}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center mt-4 text-xs">
+                    <span className="text-slate-400 font-mono bg-slate-100 px-2 py-1 rounded">ID: {b.id}</span>
+                    {b.paymentScreenshot && (
+                      <a href={b.paymentScreenshot} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium hover:underline">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        View Screenshot
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* Card Footer - Actions */}
+                {b.status === 'pending' && (
+                  <div className="bg-white border-t border-slate-100 p-4 flex gap-3">
+                    <button
+                      onClick={() => handleStatus(b, 'approved')}
+                      disabled={actionLoading === b.id}
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
+                      {actionLoading === b.id ? 'Processing...' : 'Approve'}
+                    </button>
+                    <button
+                      onClick={() => handleStatus(b, 'rejected')}
+                      disabled={actionLoading === b.id}
+                      className="flex-1 bg-white border border-red-200 text-red-600 hover:bg-red-50 font-semibold py-2.5 rounded-xl text-sm transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
+                      Reject
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -211,12 +243,12 @@ export default function AdminBookings() {
 
 function StatusBadge({ status }) {
   const styles = {
-    pending: 'bg-amber-50 text-amber-700',
-    approved: 'bg-green-50 text-green-700',
-    rejected: 'bg-red-50 text-red-700'
+    pending: 'bg-amber-50 text-amber-700 border-amber-200',
+    approved: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    rejected: 'bg-red-50 text-red-700 border-red-200'
   }
   return (
-    <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${styles[status] || 'bg-gray-100'}`}>
+    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize border ${styles[status] || 'bg-slate-100 text-slate-700 border-slate-200'}`}>
       {status}
     </span>
   )

@@ -3,7 +3,6 @@ require('dotenv').config();
 
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 
-// Sheet names
 const SHEETS = {
   CUSTOMERS: 'Customers',
   COURTS: 'Courts',
@@ -16,15 +15,11 @@ const SHEETS = {
   MONTHLY_REPORT: 'Monthly_Report'
 };
 
-// Helper to safely format sheet range
 function getRange(sheetName, cellRange = 'A:Z') {
   const safeName = /[\s\-]/.test(sheetName) ? `'${sheetName}'` : sheetName;
   return `${safeName}!${cellRange}`;
 }
 
-/**
- * Read all rows from a sheet
- */
 async function getSheetData(sheetName) {
   const sheets = getSheetsClient();
   const response = await sheets.spreadsheets.values.get({
@@ -45,24 +40,16 @@ async function getSheetData(sheetName) {
   });
 }
 
-/**
- * Append a row to a sheet
- */
 async function appendRow(sheetName, values) {
   const sheets = getSheetsClient();
   await sheets.spreadsheets.values.append({
     spreadsheetId: SPREADSHEET_ID,
     range: getRange(sheetName),
     valueInputOption: 'USER_ENTERED',
-    requestBody: {
-      values: [values]
-    }
+    requestBody: { values: [values] }
   });
 }
 
-/**
- * Update a specific row
- */
 async function updateRow(sheetName, rowNumber, values) {
   const sheets = getSheetsClient();
   const range = getRange(sheetName, `A${rowNumber}:Z${rowNumber}`);
@@ -70,15 +57,10 @@ async function updateRow(sheetName, rowNumber, values) {
     spreadsheetId: SPREADSHEET_ID,
     range,
     valueInputOption: 'USER_ENTERED',
-    requestBody: {
-      values: [values]
-    }
+    requestBody: { values: [values] }
   });
 }
 
-/**
- * Find row number by a column value
- */
 async function findRowNumber(sheetName, columnIndex, value) {
   const sheets = getSheetsClient();
   const response = await sheets.spreadsheets.values.get({
@@ -99,9 +81,8 @@ async function findRowNumber(sheetName, columnIndex, value) {
 async function getCourts() {
   const data = await getSheetData(SHEETS.COURTS);
   return data
-    .filter(c => c.is_active !== 'FALSE' && c.is_active !== 'false' && c.is_active !== '0')
     .map(c => ({
-      id: String(c.id || '').trim(), // ID ko string bana diya
+      id: String(c.id || '').trim(),
       name: c.name,
       type: c.type,
       location: c.location,
@@ -112,8 +93,9 @@ async function getCourts() {
       youtubeUrl: c.youtube_url || '',
       gallery: c.gallery || '',
       mapUrl: c.map_url || '',
-      isActive: true
-    }));
+      isActive: String(c.is_active || '').toLowerCase() !== 'false' && String(c.is_active || '') !== '0'
+    }))
+    .filter(c => c.id && c.isActive); // Sirf valid ID aur active courts
 }
 
 async function getCourtById(id) {
@@ -128,7 +110,7 @@ async function getBookings() {
   return data.map(b => ({
     id: b.booking_id || b.id,
     bookingId: b.booking_id || b.id,
-    courtId: String(b.court_id || '').trim(), // String mein convert kar ke spaces hatayi
+    courtId: String(b.court_id || '').trim(),
     courtName: b.court_name,
     date: String(b.date || '').trim(),
     slotStart: String(b.slot_start || '').trim(),
@@ -147,8 +129,6 @@ async function getBookings() {
 
 async function getBookingsByDateAndCourt(courtId, date) {
   const bookings = await getBookings();
-  
-  // Dono ko String bana ke compare kiya, taake 1 (number) aur "1" (text) dono match ho jayein
   const cleanCourtId = String(courtId || '').trim();
   const cleanDate = String(date || '').trim();
   
@@ -179,12 +159,7 @@ async function createBooking(booking) {
     booking.qrCode || ''
   ]);
 
-  return { 
-    id: booking.bookingId, 
-    ...booking, 
-    status: 'pending', 
-    createdAt 
-  };
+  return { id: booking.bookingId, ...booking, status: 'pending', createdAt };
 }
 
 async function updateBookingStatus(bookingId, status, notes = '') {
@@ -207,8 +182,8 @@ async function updateBookingStatus(bookingId, status, notes = '') {
     await appendRow(SHEETS.PAYMENTS, [
       `PAY-${Date.now()}`,
       bookingId,
-      row[6], // Customer Name
-      row[9], // Amount
+      row[6], 
+      row[9], 
       'Online / Transfer',
       'Received',
       new Date().toISOString()
@@ -226,9 +201,7 @@ async function findCustomerByMobile(mobile) {
 
 async function upsertCustomer({ name, mobile, email }) {
   const existing = await findCustomerByMobile(mobile);
-  if (existing) {
-    return existing;
-  }
+  if (existing) return existing;
 
   const id = `CU${Date.now()}`;
   const createdAt = new Date().toISOString();
@@ -242,24 +215,13 @@ async function createWalkIn(walkIn) {
   const createdAt = new Date().toISOString();
   
   await appendRow(SHEETS.WALK_INS, [
-    id,
-    walkIn.customerName,
-    walkIn.mobile,
-    walkIn.courtName,
-    walkIn.date,
-    walkIn.time,
-    walkIn.amount,
-    'Completed'
+    id, walkIn.customerName, walkIn.mobile, walkIn.courtName,
+    walkIn.date, walkIn.time, walkIn.amount, 'Completed'
   ]);
 
   await appendRow(SHEETS.PAYMENTS, [
-    `PAY-${Date.now()}`,
-    id,
-    walkIn.customerName,
-    walkIn.amount,
-    'Cash',
-    'Received',
-    createdAt
+    `PAY-${Date.now()}`, id, walkIn.customerName, walkIn.amount,
+    'Cash', 'Received', createdAt
   ]);
 
   return { id, ...walkIn, status: 'Completed' };
@@ -269,7 +231,6 @@ async function createWalkIn(walkIn) {
 async function createContactMessage({ name, email, message }) {
   const id = `MSG-${Date.now()}`;
   const createdAt = new Date().toISOString();
-  
   await appendRow(SHEETS.CONTACT, [id, name, email, message, createdAt]);
   return { id, name, email, message, createdAt };
 }
@@ -287,12 +248,7 @@ async function getDashboardStats() {
     .filter(p => p.status && p.status.toLowerCase() === 'received')
     .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
-  return {
-    totalBookings,
-    pendingBookings,
-    approvedBookings,
-    totalRevenue
-  };
+  return { totalBookings, pendingBookings, approvedBookings, totalRevenue };
 }
 
 // ========== SETTINGS ==========
@@ -306,19 +262,7 @@ async function getSettings() {
 }
 
 module.exports = {
-  SHEETS,
-  getCourts,
-  getCourtById,
-  getBookings,
-  getBookingsByDateAndCourt,
-  createBooking,
-  updateBookingStatus,
-  findCustomerByMobile,
-  upsertCustomer,
-  getSettings,
-  getSheetData,
-  appendRow,
-  createWalkIn,
-  createContactMessage,
-  getDashboardStats
+  SHEETS, getCourts, getCourtById, getBookings, getBookingsByDateAndCourt,
+  createBooking, updateBookingStatus, findCustomerByMobile, upsertCustomer,
+  getSettings, getSheetData, appendRow, createWalkIn, createContactMessage, getDashboardStats
 };

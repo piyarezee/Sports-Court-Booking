@@ -60,25 +60,20 @@ export default function CourtDetail() {
   return (
     <div className="min-h-screen bg-slate-900 pb-28 text-white">
       <div className="max-w-lg mx-auto relative">
-        {/* Header */}
         <div className="absolute top-0 left-0 right-0 z-20 px-4 py-3 flex items-center justify-between bg-gradient-to-b from-black/70 to-transparent">
           <button onClick={() => navigate('/')} className="p-2 bg-black/30 backdrop-blur-md rounded-full border border-white/20">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
           </button>
           <h1 className="font-bold text-sm bg-black/30 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20 truncate max-w-[60%]">{court.name}</h1>
           <div className="w-9"></div>
         </div>
 
-        {/* Court Main Image */}
         <div className="relative h-80 w-full bg-slate-800 overflow-hidden">
           <img src={court.image} alt={court.name} className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent" />
         </div>
 
         <main className="px-4 -mt-10 relative z-10">
-          {/* Glass Info Card */}
           <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-2xl mb-5">
             <div className="flex justify-between items-start mb-2">
               <div>
@@ -88,23 +83,18 @@ export default function CourtDetail() {
                   {court.location}
                 </p>
               </div>
-              <span className="bg-primary-500/20 text-primary-300 text-xs font-medium px-2.5 py-1 rounded-full border border-primary-500/30">
-                {court.type}
-              </span>
+              <span className="bg-primary-500/20 text-primary-300 text-xs font-medium px-2.5 py-1 rounded-full border border-primary-500/30">{court.type}</span>
             </div>
             
             <p className="text-sm text-slate-300 mb-5 leading-relaxed">{court.description}</p>
 
-            {/* Amenities */}
             {court.amenities && court.amenities.length > 0 && (
               <div className="mb-5">
                 <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2 tracking-wider">Facilities</h4>
                 <div className="flex flex-wrap gap-2">
                   {court.amenities.map(item => (
                     <span key={item} className="flex items-center gap-1 bg-white/5 text-slate-300 text-xs font-medium px-2.5 py-1.5 rounded-full border border-white/10">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                       {item}
                     </span>
                   ))}
@@ -112,7 +102,6 @@ export default function CourtDetail() {
               </div>
             )}
 
-            {/* Media Action Buttons */}
             <div className="grid grid-cols-3 gap-2 mb-5">
               {youtubeId && (
                 <button onClick={() => setActiveMedia('video')} className="flex flex-col items-center justify-center gap-1 bg-white/5 border border-white/10 text-white text-xs font-medium py-3 rounded-xl hover:bg-white/10 transition">
@@ -120,14 +109,12 @@ export default function CourtDetail() {
                   Video
                 </button>
               )}
-              
               {court.gallery && (
                 <a href={court.gallery} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center gap-1 bg-white/5 border border-white/10 text-white text-xs font-medium py-3 rounded-xl hover:bg-white/10 transition">
                   <svg className="h-5 w-5 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                   Photos
                 </a>
               )}
-
               {court.mapUrl && (
                 <button onClick={() => setActiveMedia('map')} className="flex flex-col items-center justify-center gap-1 bg-white/5 border border-white/10 text-white text-xs font-medium py-3 rounded-xl hover:bg-white/10 transition">
                   <svg className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
@@ -142,15 +129,13 @@ export default function CourtDetail() {
             </div>
           </div>
 
-          {/* Glass Date Selection (14 Days) */}
+          {/* 14 Days Grid (7 columns x 2 rows) */}
           <div className="mb-4">
             <h3 className="font-semibold text-white mb-3 flex items-center gap-2 text-sm">
               <span className="w-1.5 h-5 bg-primary-500 rounded-full"></span>
-              Select Date (Next 14 Days)
+              Select Date (14 Days)
             </h3>
-            
-            {/* Scrollable container with visible scrollbar */}
-            <div className="flex gap-2 overflow-x-auto pb-3 -mx-1 px-1" style={{ scrollbarWidth: 'thin', scrollbarColor: '#475569 #1e293b' }}>
+            <div className="grid grid-cols-7 gap-2">
               {dates.map((date) => {
                 const value = formatDateValue(date)
                 const isSelected = selectedDate === value
@@ -160,20 +145,17 @@ export default function CourtDetail() {
                   <button
                     key={value}
                     onClick={() => setSelectedDate(value)}
-                    className={`flex-shrink-0 w-16 py-3 rounded-xl text-center transition-all duration-200 ${
+                    className={`py-2 rounded-lg text-center transition-all duration-200 ${
                       isSelected 
                         ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30 scale-105' 
                         : 'bg-white/5 border border-white/10 text-slate-400 hover:bg-white/10'
                     }`}
                   >
-                    <div className="text-[10px] uppercase opacity-80 font-bold">
+                    <div className="text-[9px] uppercase opacity-80 font-bold">
                       {isToday ? 'Today' : date.toLocaleDateString('en-PK', { weekday: 'short' })}
                     </div>
-                    <div className="text-lg font-bold leading-tight mt-1">
+                    <div className="text-base font-bold leading-tight mt-0.5">
                       {date.getDate()}
-                    </div>
-                    <div className="text-[10px] opacity-80 uppercase">
-                      {date.toLocaleDateString('en-PK', { month: 'short' })}
                     </div>
                   </button>
                 )
@@ -183,7 +165,6 @@ export default function CourtDetail() {
         </main>
       </div>
 
-      {/* Sticky Bottom Button */}
       <div className="fixed bottom-0 left-0 right-0 bg-slate-900/80 backdrop-blur-lg border-t border-white/10 p-4 z-30">
         <div className="max-w-lg mx-auto">
           <button
@@ -200,7 +181,6 @@ export default function CourtDetail() {
         </div>
       </div>
 
-      {/* Media Modal / Popup */}
       {activeMedia && (
         <div className="fixed inset-0 z-50 bg-black/95 flex flex-col p-4">
           <div className="flex justify-end mb-4">
@@ -209,28 +189,12 @@ export default function CourtDetail() {
           <div className="flex-1 flex items-center justify-center overflow-auto">
             {activeMedia === 'video' && (
               <div className="w-full max-w-2xl aspect-video">
-                <iframe
-                  className="w-full h-full rounded-lg"
-                  src={`https://www.youtube.com/embed/${youtubeId}`}
-                  title="YouTube video player"
-                  frameBorder="0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                ></iframe>
+                <iframe className="w-full h-full rounded-lg" src={`https://www.youtube.com/embed/${youtubeId}`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
               </div>
             )}
             {activeMedia === 'map' && (
               <div className="w-full h-full max-w-2xl">
-                <iframe
-                  title="Court Location"
-                  src={court.mapUrl}
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0, borderRadius: '12px' }}
-                  allowFullScreen=""
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                ></iframe>
+                <iframe title="Court Location" src={court.mapUrl} width="100%" height="100%" style={{ border: 0, borderRadius: '12px' }} allowFullScreen="" loading="lazy" referrerPolicy="no-referrer-when-downgrade"></iframe>
               </div>
             )}
           </div>

@@ -41,7 +41,7 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <div>
               {/* Yahan Name Change Karein */}
-              <h1 className="text-2xl font-extrabold tracking-tight leading-tight text-white">METRO SPORTS</h1>
+              <h1 className="text-2xl font-extrabold tracking-tight leading-tight text-white">Athletic Center SAC</h1>
               <p className="text-primary-300 text-sm font-medium">ARENA</p>
             </div>
             <div className="bg-white/10 p-2.5 rounded-xl backdrop-blur-sm border border-white/10">

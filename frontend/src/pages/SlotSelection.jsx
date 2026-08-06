@@ -14,7 +14,7 @@ export default function SlotSelection() {
   const date = searchParams.get('date')
 
   const [court, setCourt] = useState(null)
-  const [slots, setSlots] = useState([])
+  const [bookedSlots, setBookedSlots] = useState([])
   const [loading, setLoading] = useState(true)
   
   const [duration, setDuration] = useState(1)
@@ -25,13 +25,18 @@ export default function SlotSelection() {
     async function loadData() {
       setLoading(true)
       try {
-        const response = await axios.get(`${API}/courts/${courtId}/slots?date=${date}`)
-        if (response.data?.data) {
-          setCourt(response.data.data.court)
-          setSlots(response.data.data.slots)
-        }
+        const courtRes = await axios.get(`${API}/courts/${courtId}`)
+        if (courtRes.data?.data) setCourt(courtRes.data.data)
+
+        try {
+          const response = await axios.get(`${API}/bookings`)
+          const allBookings = response.data?.data || []
+          const filteredBookings = allBookings.filter(b => String(b.courtId) === String(courtId) && b.date === date)
+          setBookedSlots(filteredBookings.map(b => b.slotStart))
+        } catch (err) { /* Blank slots */ }
+
       } catch (err) {
-        console.error('Failed to load slots:', err)
+        console.error('Failed to load court:', err)
       } finally {
         setLoading(false)
       }
@@ -40,31 +45,30 @@ export default function SlotSelection() {
     if (courtId && date) loadData()
   }, [courtId, date])
 
+  // Generate slots from 10:00 to 22:00 locally as a fallback
+  const allSlots = Array.from({ length: 13 }, (_, i) => `${String(i + 10).padStart(2, '0')}:00`)
+
   const handleSlotClick = (startSlot) => {
     setError('')
-    const startIndex = slots.findIndex(s => s.start === startSlot)
+    const startIndex = allSlots.indexOf(startSlot)
     
     for (let i = 0; i < duration; i++) {
-      if (!slots[startIndex + i] || startIndex + i >= slots.length) {
+      if (startIndex + i >= allSlots.length) {
         setError('Cannot book this duration, court closes soon.')
         return
       }
-      if (slots[startIndex + i].isBooked) {
-        setError(`Slot ${slots[startIndex + i].start} is already booked.`)
+      const checkSlot = allSlots[startIndex + i]
+      if (bookedSlots.includes(checkSlot)) {
+        setError(`Slot ${checkSlot} is already booked.`)
         return
       }
     }
-    
     setSelectedStart(startSlot)
   }
 
   const handleContinue = () => {
     if (!selectedStart) return
-    
-    const startIndex = slots.findIndex(s => s.start === selectedStart)
-    const endSlotObj = slots[startIndex + duration - 1]
-    const endTime = endSlotObj ? endSlotObj.end : `${String(Number(selectedStart.split(':')[0]) + 1).padStart(2, '0')}:00`
-    
+    const endTime = `${String(Number(selectedStart.split(':')[0]) + duration).padStart(2, '0')}:00`
     navigate(`/book?court=${courtId}&date=${date}&slotStart=${selectedStart}&slotEnd=${endTime}&duration=${duration}`)
   }
 
@@ -125,32 +129,28 @@ export default function SlotSelection() {
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-3">
-              {slots.length === 0 ? (
-                <p className="text-center text-gray-500 col-span-3 py-6">No slots available for this date.</p>
-              ) : (
-                slots.map(slot => {
-                  const isBooked = slot.isBooked
-                  const isSelected = selectedStart === slot.start
+              {allSlots.map(slot => {
+                const isBooked = bookedSlots.includes(slot)
+                const isSelected = selectedStart === slot
 
-                  return (
-                    <button
-                      key={slot.id}
-                      onClick={() => !isBooked && handleSlotClick(slot.start)}
-                      disabled={isBooked}
-                      className={`py-3 rounded-xl text-center text-sm font-semibold transition-all duration-200
-                        ${isBooked 
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed line-through' 
-                          : isSelected 
-                            ? 'bg-primary-600 text-white shadow-md scale-105' 
-                            : 'bg-white border border-gray-200 text-gray-700 hover:border-primary-400 hover:bg-primary-50'
-                        }`
-                      }
-                    >
-                      {slot.start}
-                    </button>
-                  )
-                })
-              )}
+                return (
+                  <button
+                    key={slot}
+                    onClick={() => !isBooked && handleSlotClick(slot)}
+                    disabled={isBooked}
+                    className={`py-3 rounded-xl text-center text-sm font-semibold transition-all duration-200
+                      ${isBooked 
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed line-through' 
+                        : isSelected 
+                          ? 'bg-primary-600 text-white shadow-md scale-105' 
+                          : 'bg-white border border-gray-200 text-gray-700 hover:border-primary-400 hover:bg-primary-50'
+                      }`
+                    }
+                  >
+                    {slot}
+                  </button>
+                )
+              })}
             </div>
           )}
         </main>

@@ -199,4 +199,77 @@ export default function AdminBookings() {
                     </div>
 
                     {/* Meta Info */}
-                    <div className="flex sm:flex-col items-start sm:items-end justify-between gap-2 sm:gap-1 text
+                    <div className="flex sm:flex-col items-start sm:items-end justify-between gap-2 sm:gap-1 text-xs text-slate-400">
+                      <span className="font-mono bg-slate-50 px-2 py-1 rounded border border-slate-200">#{b.id}</span>
+                      {b.paymentScreenshot && (
+                        <a href={b.paymentScreenshot} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium hover:underline">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                          Receipt
+                        </a>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Booking Details Grid */}
+                  <div className="mt-5 pt-5 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <p className="text-slate-400 text-xs font-medium uppercase tracking-wider mb-1">Court</p>
+                      <p className="font-semibold text-slate-800">{b.courtName}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 text-xs font-medium uppercase tracking-wider mb-1">Date</p>
+                      <p className="font-semibold text-slate-800">{b.date}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 text-xs font-medium uppercase tracking-wider mb-1">Time</p>
+                      <p className="font-semibold text-slate-800">{b.slotStart} - {b.slotEnd}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 text-xs font-medium uppercase tracking-wider mb-1">Amount</p>
+                      <p className="font-semibold text-slate-800">Rs. {b.amount}</p>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  {b.status === 'pending' && (
+                    <div className="mt-5 flex flex-col sm:flex-row gap-3">
+                      <button
+                        onClick={() => handleStatus(b, 'approved')}
+                        disabled={actionLoading === b.id}
+                        className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 rounded-xl text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                        {actionLoading === b.id ? 'Processing...' : 'Approve & Notify'}
+                      </button>
+                      <button
+                        onClick={() => handleStatus(b, 'rejected')}
+                        disabled={actionLoading === b.id}
+                        className="flex-1 sm:flex-initial bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-red-600 font-semibold py-3 px-6 rounded-xl text-sm transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                        Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
+    </div>
+  )
+}
+
+function StatusBadge({ status }) {
+  const styles = {
+    pending: 'bg-amber-50 text-amber-700 border-amber-200',
+    approved: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    rejected: 'bg-red-50 text-red-700 border-red-200'
+  }
+  return (
+    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${styles[status] || 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+      {status}
+    </span>
+  )
+}

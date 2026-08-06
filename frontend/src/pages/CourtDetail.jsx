@@ -1,6 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import Header from '../components/Header'
 import { getCourt } from '../services/api'
 import { courts as mockCourts } from '../data/mockData'
 
@@ -8,7 +7,7 @@ export default function CourtDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [court, setCourt] = useState(null)
-  const [activeMedia, setActiveMedia] = useState(null) // 'video', 'map', or null
+  const [activeMedia, setActiveMedia] = useState(null)
 
   useEffect(() => {
     async function loadCourt() {
@@ -50,7 +49,6 @@ export default function CourtDetail() {
     navigate(`/court/${id}/slots?date=${selectedDate}`)
   }
 
-  // Extract YouTube Video ID
   const getYouTubeID = (url) => {
     if (!url) return null;
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
@@ -70,16 +68,12 @@ export default function CourtDetail() {
             </svg>
           </button>
           <h1 className="font-bold text-sm bg-black/30 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20 truncate max-w-[60%]">{court.name}</h1>
-          <div className="w-9"></div> {/* Dummy for alignment */}
+          <div className="w-9"></div>
         </div>
 
         {/* Court Main Image */}
         <div className="relative h-80 w-full bg-slate-800 overflow-hidden">
-          <img 
-            src={court.image} 
-            alt={court.name}
-            className="w-full h-full object-cover"
-          />
+          <img src={court.image} alt={court.name} className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent" />
         </div>
 
@@ -127,7 +121,6 @@ export default function CourtDetail() {
                 </button>
               )}
               
-              {/* Photos button -> Direct Google Site Link */}
               {court.gallery && (
                 <a href={court.gallery} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center gap-1 bg-white/5 border border-white/10 text-white text-xs font-medium py-3 rounded-xl hover:bg-white/10 transition">
                   <svg className="h-5 w-5 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
@@ -149,13 +142,15 @@ export default function CourtDetail() {
             </div>
           </div>
 
-          {/* Glass Date Selection */}
+          {/* Glass Date Selection (14 Days) */}
           <div className="mb-4">
             <h3 className="font-semibold text-white mb-3 flex items-center gap-2 text-sm">
               <span className="w-1.5 h-5 bg-primary-500 rounded-full"></span>
-              Select Date (14 Days)
+              Select Date (Next 14 Days)
             </h3>
-            <div className="flex gap-2 overflow-x-auto pb-3 -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
+            
+            {/* Scrollable container with visible scrollbar */}
+            <div className="flex gap-2 overflow-x-auto pb-3 -mx-1 px-1" style={{ scrollbarWidth: 'thin', scrollbarColor: '#475569 #1e293b' }}>
               {dates.map((date) => {
                 const value = formatDateValue(date)
                 const isSelected = selectedDate === value
@@ -205,7 +200,7 @@ export default function CourtDetail() {
         </div>
       </div>
 
-      {/* Media Modal / Popup (Video and Map) */}
+      {/* Media Modal / Popup */}
       {activeMedia && (
         <div className="fixed inset-0 z-50 bg-black/95 flex flex-col p-4">
           <div className="flex justify-end mb-4">

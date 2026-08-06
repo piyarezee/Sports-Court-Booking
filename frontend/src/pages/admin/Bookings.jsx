@@ -44,12 +44,49 @@ export default function AdminBookings() {
     }
   }
 
-  const handleStatus = async (id, status) => {
-    const notes = status === 'rejected' ? prompt('Rejection reason (optional):') : ''
-    setActionLoading(id)
+  // Helper function to format PK mobile number for WhatsApp (03XX -> 92XX)
+  const formatWhatsAppNumber = (mobile) => {
+    let cleanMobile = mobile.replace(/[\s-]/g, '')
+    if (cleanMobile.startsWith('03')) {
+      return '92' + cleanMobile.substring(1)
+    }
+    if (cleanMobile.startsWith('+92')) {
+      return cleanMobile.substring(1)
+    }
+    return cleanMobile
+  }
+
+  // Helper function to generate WhatsApp link with pre-filled message
+  const generateWhatsAppLink = (booking, status, notes = '') => {
+    const phone = formatWhatsAppNumber(booking.mobile)
+    let message = ''
+
+    if (status === 'approved') {
+      message = `*Booking Confirmed!* ✅\n\nHi ${booking.customerName},\nYour booking for *${booking.courtName}* on *${booking.date}* at *${booking.slotStart} - ${booking.slotEnd}* has been *APPROVED*.\n\nBooking ID: ${booking.id}\nAmount: Rs. ${booking.amount}\n\nPlease arrive 10 minutes before your time. See you at the court!`
+    } else if (status === 'rejected') {
+      message = `*Booking Update* ❌\n\nHi ${booking.customerName},\nWe regret to inform you that your booking for *${booking.courtName}* on *${booking.date}* at *${booking.slotStart} - ${booking.slotEnd}* has been rejected.`
+      if (notes) message += `\n\nReason: ${notes}`
+      message += `\n\nBooking ID: ${booking.id}\nPlease contact us for more details.`
+    }
+
+    return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+  }
+
+  const handleStatus = async (booking, status) => {
+    let notes = ''
+    if (status === 'rejected') {
+      notes = prompt('Rejection reason (optional):') || ''
+    }
+
+    // 1. Sabse pehle WhatsApp Link banao aur turant naye tab mein kholo
+    const waLink = generateWhatsAppLink(booking, status, notes)
+    window.open(waLink, '_blank')
+
+    // 2. Ab backend pe status update karo
+    setActionLoading(booking.id)
     try {
       await axios.patch(
-        `${API}/admin/bookings/${id}/status`,
+        `${API}/admin/bookings/${booking.id}/status`,
         { status, notes: notes || '' },
         { headers: { Authorization: `Bearer ${token}` } }
       )
@@ -158,18 +195,18 @@ export default function AdminBookings() {
                 {b.status === 'pending' && (
                   <div className="flex gap-2">
                     <button
-                      onClick={() => handleStatus(b.id, 'approved')}
+                      onClick={() => handleStatus(b, 'approved')}
                       disabled={actionLoading === b.id}
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 rounded-xl text-sm transition disabled:opacity-50"
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 rounded-xl text-sm transition disabled:opacity-50 flex items-center justify-center gap-1"
                     >
-                      {actionLoading === b.id ? '...' : 'Approve'}
+                      {actionLoading === b.id ? '...' : 'Approve & WhatsApp'}
                     </button>
                     <button
-                      onClick={() => handleStatus(b.id, 'rejected')}
+                      onClick={() => handleStatus(b, 'rejected')}
                       disabled={actionLoading === b.id}
-                      className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 rounded-xl text-sm transition disabled:opacity-50"
+                      className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 rounded-xl text-sm transition disabled:opacity-50 flex items-center justify-center gap-1"
                     >
-                      Reject
+                      Reject & WhatsApp
                     </button>
                   </div>
                 )}

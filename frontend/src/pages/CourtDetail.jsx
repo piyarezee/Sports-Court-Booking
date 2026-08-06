@@ -8,7 +8,7 @@ export default function CourtDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [court, setCourt] = useState(null)
-  const [activeMedia, setActiveMedia] = useState(null)
+  const [activeMedia, setActiveMedia] = useState(null) // 'video', 'map', or null
 
   useEffect(() => {
     async function loadCourt() {
@@ -49,6 +49,7 @@ export default function CourtDetail() {
     navigate(`/court/${id}/slots?date=${selectedDate}`)
   }
 
+  // Extract YouTube Video ID
   const getYouTubeID = (url) => {
     if (!url) return null;
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
@@ -56,14 +57,13 @@ export default function CourtDetail() {
     return (match && match[2].length === 11) ? match[2] : null;
   };
   const youtubeId = getYouTubeID(court.youtubeUrl);
-  const galleryImages = court.gallery ? court.gallery.split(',').map(url => url.trim()).filter(url => url) : [];
 
   return (
     <div className="min-h-screen bg-gray-50 pb-28">
       <div className="max-w-lg mx-auto bg-gray-50 min-h-screen shadow-sm">
         <Header title={court.name} showBack backTo="/" />
 
-        {/* Court Main Image */}
+        {/* Court Main Image - Fixed inside container */}
         <div className="relative h-60 w-full bg-gray-100 overflow-hidden">
           <img 
             src={court.image} 
@@ -110,12 +110,15 @@ export default function CourtDetail() {
                   Video
                 </button>
               )}
-              {galleryImages.length > 0 && (
-                <button onClick={() => setActiveMedia('gallery')} className="flex flex-col items-center justify-center gap-1 bg-gray-50 border border-gray-200 text-gray-700 text-xs font-medium px-2 py-3 rounded-xl hover:bg-gray-100 transition">
+              
+              {/* Photos button is now a direct link to Google Sites */}
+              {court.gallery && (
+                <a href={court.gallery} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center gap-1 bg-gray-50 border border-gray-200 text-gray-700 text-xs font-medium px-2 py-3 rounded-xl hover:bg-gray-100 transition">
                   <svg className="h-5 w-5 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                   Photos
-                </button>
+                </a>
               )}
+
               {court.mapUrl && (
                 <button onClick={() => setActiveMedia('map')} className="flex flex-col items-center justify-center gap-1 bg-gray-50 border border-gray-200 text-gray-700 text-xs font-medium px-2 py-3 rounded-xl hover:bg-gray-100 transition">
                   <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
@@ -130,10 +133,10 @@ export default function CourtDetail() {
             </div>
           </div>
 
-          {/* Date Selection - Grid Layout (7 days per row) */}
+          {/* Date Selection */}
           <div className="mb-4">
             <h3 className="font-semibold text-gray-900 mb-3">Select Date</h3>
-            <div className="grid grid-cols-7 gap-1.5 sm:gap-2 pb-2">
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
               {dates.map((date) => {
                 const value = formatDateValue(date)
                 const isSelected = selectedDate === value
@@ -143,20 +146,21 @@ export default function CourtDetail() {
                   <button
                     key={value}
                     onClick={() => setSelectedDate(value)}
-                    className={`py-2 rounded-lg text-center transition-all flex flex-col items-center justify-center
+                    className={`
+                      flex-shrink-0 w-16 py-3 rounded-xl text-center transition-all
                       ${isSelected 
-                        ? 'bg-primary-600 text-white shadow-md' 
+                        ? 'bg-primary-600 text-white shadow-md shadow-primary-200' 
                         : 'bg-white border border-gray-200 text-gray-700 hover:border-primary-300'
-                      }`
-                    }
+                      }
+                    `}
                   >
-                    <div className="text-[9px] sm:text-[10px] uppercase opacity-70">
+                    <div className="text-[10px] uppercase opacity-70">
                       {isToday ? 'Today' : date.toLocaleDateString('en-PK', { weekday: 'short' })}
                     </div>
-                    <div className="text-sm sm:text-lg font-bold leading-tight">
+                    <div className="text-lg font-bold leading-tight">
                       {date.getDate()}
                     </div>
-                    <div className="text-[9px] sm:text-[10px] opacity-70 hidden sm:block">
+                    <div className="text-[10px] opacity-70">
                       {date.toLocaleDateString('en-PK', { month: 'short' })}
                     </div>
                   </button>
@@ -173,14 +177,17 @@ export default function CourtDetail() {
           <button
             onClick={handleContinue}
             disabled={!selectedDate}
-            className={`w-full btn-primary text-center ${!selectedDate ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`
+              w-full btn-primary text-center
+              ${!selectedDate ? 'opacity-50 cursor-not-allowed' : ''}
+            `}
           >
             {selectedDate ? 'View Available Slots' : 'Select a Date'}
           </button>
         </div>
       </div>
 
-      {/* Media Modal */}
+      {/* Media Modal / Popup (Only for Video and Map) */}
       {activeMedia && (
         <div className="fixed inset-0 z-50 bg-black/90 flex flex-col p-4">
           <div className="flex justify-end mb-4">
@@ -197,13 +204,6 @@ export default function CourtDetail() {
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                 ></iframe>
-              </div>
-            )}
-            {activeMedia === 'gallery' && (
-              <div className="w-full max-w-md space-y-4">
-                {galleryImages.map((imgUrl, index) => (
-                  <img key={index} src={imgUrl} alt={`Gallery ${index + 1}`} className="w-full rounded-lg" />
-                ))}
               </div>
             )}
             {activeMedia === 'map' && (

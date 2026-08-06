@@ -11,10 +11,7 @@ export default function Home() {
     async function load() {
       try {
         const response = await getCourts()
-        // Ensure response is an array, if not, fallback to mock
         const data = Array.isArray(response) ? response : (response?.data || [])
-        
-        // Filter out any courts that don't have a valid ID
         const validCourts = data.filter(c => c && c.id != null)
         
         if (validCourts.length > 0) {
@@ -33,15 +30,14 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex justify-center">
-      {/* Wrapper to lock width on desktop */}
       <div className="w-full max-w-lg bg-gray-50 shadow-xl min-h-screen relative">
         
-        {/* Top Branded Header */}
         <header className="bg-primary-600 text-white p-5 sticky top-0 z-10 shadow-lg rounded-b-3xl">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-extrabold tracking-tight leading-tight">PLAYZONE SPORTS</h1>
-              <p className="text-primary-100 text-sm font-medium">COMPLEX</p>
+              {/* Yahan Name Change Karein */}
+              <h1 className="text-2xl font-extrabold tracking-tight leading-tight">Athletic Center SAC</h1>
+              <p className="text-primary-100 text-sm font-medium">ARENA</p>
             </div>
             <div className="bg-white/20 p-2 rounded-full backdrop-blur-sm">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -74,22 +70,14 @@ export default function Home() {
                     key={court.id}
                     className="block bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
                   >
-                    {/* Court Image Container */}
                     <div className="relative h-44 w-full bg-gray-100 overflow-hidden">
-                      <img 
-                        src={court.image} 
-                        alt={court.name} 
-                        className="w-full h-full object-cover"
-                      />
-                      {/* Gradient Overlay for better text visibility */}
+                      <img src={court.image} alt={court.name} className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
-                      
                       <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-bold text-primary-700 shadow-sm">
                         Rs. {court.pricePerHour}/hr
                       </div>
                     </div>
                     
-                    {/* Court Info */}
                     <div className="p-4">
                       <div className="flex justify-between items-start mb-1">
                         <h3 className="font-bold text-lg text-gray-900">{court.name}</h3>

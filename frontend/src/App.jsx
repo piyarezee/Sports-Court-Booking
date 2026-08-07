@@ -12,6 +12,7 @@ import Payments from './pages/Payments'
 import ContactMessages from './pages/ContactMessages'
 import StaffLogin from './pages/staff/Login'
 import StaffDashboard from './pages/staff/Dashboard'
+import SystemStatus from './pages/admin/SystemStatus' // <-- New Import
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
         <Route path="/admin/walk-in" element={<WalkIn />} />
         <Route path="/admin/payments" element={<Payments />} />
         <Route path="/admin/contact" element={<ContactMessages />} />
+        <Route path="/admin/system-status" element={<SystemStatus />} /> {/* <-- New Route */}
 
         {/* Staff routes */}
         <Route path="/staff/login" element={<StaffLogin />} />

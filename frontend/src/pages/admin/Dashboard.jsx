@@ -78,6 +78,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
             <p className="text-sm text-gray-500">Total Bookings</p>
@@ -97,6 +98,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
+        {/* Navigation Cards (7 Buttons) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-8">
           <Link
             to="/admin/bookings"
@@ -163,8 +165,20 @@ export default function AdminDashboard() {
             </div>
             <span className="text-2xl">📈</span>
           </Link>
+
+          <Link
+            to="/"
+            className="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-2xl p-5 flex items-center justify-between transition"
+          >
+            <div>
+              <p className="font-semibold">Customer Site</p>
+              <p className="text-sm text-gray-500 mt-0.5">Open booking page</p>
+            </div>
+            <span className="text-2xl">🌐</span>
+          </Link>
         </div>
 
+        {/* Recent Bookings Table */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
             <h2 className="font-semibold text-gray-900">Recent Bookings</h2>

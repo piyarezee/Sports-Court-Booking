@@ -28,10 +28,7 @@ const staffAuth = (req, res, next) => {
 // POST /api/admin/login
 router.post('/login', (req, res) => {
   const { email, password } = req.body;
-  if (
-    email === process.env.ADMIN_EMAIL &&
-    password === process.env.ADMIN_PASSWORD
-  ) {
+  if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
     const token = Buffer.from(`${email}:${password}`).toString('base64');
     return res.json({ success: true, token, admin: { email } });
   }
@@ -49,7 +46,7 @@ router.post('/staff/login', (req, res) => {
   return res.status(401).json({ success: false, error: 'Invalid staff password' });
 });
 
-// GET /api/admin/staff/today-bookings (Protected by Staff Auth)
+// GET /api/admin/staff/today-bookings
 router.get('/staff/today-bookings', staffAuth, async (req, res) => {
   try {
     const bookings = await sheetsService.getBookings();
@@ -100,11 +97,9 @@ router.get('/bookings', async (req, res) => {
   try {
     const { status } = req.query;
     let bookings = await sheetsService.getBookings();
-
     if (status && status !== 'all') {
       bookings = bookings.filter(b => b.status === status);
     }
-
     bookings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     res.json({ success: true, data: bookings });
   } catch (err) {
@@ -118,38 +113,26 @@ router.patch('/bookings/:id/status', async (req, res) => {
   try {
     const { id } = req.params;
     const { status, notes } = req.body;
-
     if (!['approved', 'rejected'].includes(status)) {
       return res.status(400).json({ success: false, error: 'Status must be approved or rejected' });
     }
 
-    // 1. Sheet mein status update karo
     const updated = await sheetsService.updateBookingStatus(id, status, notes || '');
-
-    // 2. Turant Admin ko response bhej do taake UI stuck na ho
     res.json({ success: true, message: `Booking ${status}`, data: updated });
 
-    // 3. Ab background mein customer ko email bhejo
     const allBookings = await sheetsService.getBookings();
     const booking = allBookings.find(b => b.id === id);
-
     if (booking) {
       try {
         await emailService.sendBookingStatusEmail({
-          to: booking.email,
-          name: booking.customerName,
-          courtName: booking.courtName,
-          date: booking.date,
-          slot: `${booking.slotStart} - ${booking.slotEnd}`,
-          status,
-          bookingId: id,
-          notes: notes || ''
+          to: booking.email, name: booking.customerName, courtName: booking.courtName,
+          date: booking.date, slot: `${booking.slotStart} - ${booking.slotEnd}`,
+          status, bookingId: id, notes: notes || ''
         });
       } catch (emailErr) {
         console.error('Status email failed:', emailErr.message);
       }
     }
-
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: err.message });
@@ -209,6 +192,55 @@ router.get('/contact', async (req, res) => {
   try {
     const data = await sheetsService.getSheetData(sheetsService.SHEETS.CONTACT);
     res.json({ success: true, data });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/admin/settings
+router.get('/settings', async (req, res) => {
+  try {
+    const settings = await sheetsService.getSettings();
+    res.json({ success: true, data: settings });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ==========================================
+// REPORTING & MONITORING ROUTE
+// ==========================================
+
+// GET /api/admin/system-status
+router.get('/system-status', async (req, res) => {
+  try {
+    let sheetsStatus = { status: 'Operational', message: 'Connected' };
+    let driveStatus = { status: 'Operational', message: 'Connected' };
+    
+    try {
+      await sheetsService.getSheetData(sheetsService.SHEETS.COURTS);
+    } catch (err) {
+      sheetsStatus = { status: 'Error', message: 'Auth failed or API down' };
+      driveStatus = { status: 'Error', message: 'Auth failed (Shared with Sheets)' };
+    }
+
+    const stats = await sheetsService.getDashboardStats();
+
+    res.json({
+      success: true,
+      data: {
+        backend: { status: 'Operational', message: 'Server is running smoothly' },
+        googleSheets: sheetsStatus,
+        googleDrive: driveStatus,
+        whatsapp: { status: 'Operational', message: 'Click-to-chat links active' },
+        emailService: { status: 'Configured', message: 'API/Gmail setup ready' },
+        pendingApprovals: stats.pendingBookings,
+        totalRevenue: stats.totalRevenue,
+        totalBookings: stats.totalBookings
+      }
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: err.message });

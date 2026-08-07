@@ -154,14 +154,14 @@ export default function AdminDashboard() {
           </Link>
           
           <Link
-            to="/"
-            className="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-2xl p-5 flex items-center justify-between transition"
+            to="/admin/system-status"
+            className="bg-slate-700 hover:bg-slate-800 text-white rounded-2xl p-5 flex items-center justify-between transition"
           >
             <div>
-              <p className="font-semibold">Customer Site</p>
-              <p className="text-sm text-gray-500 mt-0.5">Open booking page</p>
+              <p className="font-semibold">System Status</p>
+              <p className="text-sm text-slate-300 mt-0.5">Monitoring & Reports</p>
             </div>
-            <span className="text-2xl">🌐</span>
+            <span className="text-2xl">📈</span>
           </Link>
         </div>
 

@@ -6,8 +6,6 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const settings = await sheetsService.getSettings();
-    
-    // Sirf payment wali details bhejni hain publically
     const publicSettings = {
       bankTitle: settings.bank_title || '',
       bankAccount: settings.bank_account || '',
@@ -16,7 +14,6 @@ router.get('/', async (req, res) => {
       easypaisaTitle: settings.easypaisa_title || '',
       easypaisaAccount: settings.easypaisa_account || ''
     };
-    
     res.json({ success: true, data: publicSettings });
   } catch (err) {
     console.error(err);

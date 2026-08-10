@@ -40,8 +40,12 @@ export default function BookingForm() {
       try {
         const data = await getCourt(courtId)
         setCourt(data)
+        
+        // Fetch Payment Settings
         const settingsRes = await axios.get(`${API}/settings`)
-        setSettings(settingsRes.data.data)
+        if (settingsRes.data?.success) {
+          setSettings(settingsRes.data.data)
+        }
       } catch {
         setCourt(mockCourts.find(c => c.id === courtId) || null)
       }

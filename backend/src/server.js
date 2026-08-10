@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const sheetsService = require('./services/sheetsService'); // Imported for settings
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -27,13 +28,34 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Routes
+// ==========================================
+// ROUTES
+// ==========================================
+
 app.use('/auth', require('./routes/auth'));
 app.use('/api/courts', require('./routes/courts'));
 app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/contact', require('./routes/contact'));
-app.use('/api/settings', require('./routes/settings'));
+
+// Settings Route (Directly written here to avoid missing file error on Render)
+app.get('/api/settings', async (req, res) => {
+  try {
+    const settings = await sheetsService.getSettings();
+    const publicSettings = {
+      bankTitle: settings.bank_title || '',
+      bankAccount: settings.bank_account || '',
+      jazzcashTitle: settings.jazzcash_title || '',
+      jazzcashAccount: settings.jazzcash_account || '',
+      easypaisaTitle: settings.easypaisa_title || '',
+      easypaisaAccount: settings.easypaisa_account || ''
+    };
+    res.json({ success: true, data: publicSettings });
+  } catch (err) {
+    console.error('Settings error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 // 404 handler
 app.use((req, res) => {
@@ -46,6 +68,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, error: err.message || 'Something went wrong!' });
 });
 
+// Start Server (0.0.0.0 added for Render port binding)
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📌 Environment: ${process.env.NODE_ENV || 'development'}`);

@@ -33,6 +33,7 @@ app.use('/api/courts', require('./routes/courts'));
 app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/contact', require('./routes/contact')); // <-- Naya Contact Route Add Kiya
+app.use('/api/settings', require('./routes/settings')); // <-- Naya Payment Route Add Kiya
 
 // 404 handler
 app.use((req, res) => {

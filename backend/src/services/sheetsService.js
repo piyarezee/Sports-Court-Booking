@@ -3,7 +3,6 @@ require('dotenv').config();
 
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 
-// Sheet names
 const SHEETS = {
   CUSTOMERS: 'Customers',
   COURTS: 'Courts',
@@ -16,15 +15,11 @@ const SHEETS = {
   MONTHLY_REPORT: 'Monthly_Report'
 };
 
-// Helper to safely format sheet range
 function getRange(sheetName, cellRange = 'A:Z') {
   const safeName = /[\s\-]/.test(sheetName) ? `'${sheetName}'` : sheetName;
   return `${safeName}!${cellRange}`;
 }
 
-/**
- * Read all rows from a sheet
- */
 async function getSheetData(sheetName) {
   const sheets = getSheetsClient();
   const response = await sheets.spreadsheets.values.get({
@@ -45,24 +40,16 @@ async function getSheetData(sheetName) {
   });
 }
 
-/**
- * Append a row to a sheet
- */
 async function appendRow(sheetName, values) {
   const sheets = getSheetsClient();
   await sheets.spreadsheets.values.append({
     spreadsheetId: SPREADSHEET_ID,
     range: getRange(sheetName),
     valueInputOption: 'USER_ENTERED',
-    requestBody: {
-      values: [values]
-    }
+    requestBody: { values: [values] }
   });
 }
 
-/**
- * Update a specific row
- */
 async function updateRow(sheetName, rowNumber, values) {
   const sheets = getSheetsClient();
   const range = getRange(sheetName, `A${rowNumber}:Z${rowNumber}`);
@@ -70,15 +57,10 @@ async function updateRow(sheetName, rowNumber, values) {
     spreadsheetId: SPREADSHEET_ID,
     range,
     valueInputOption: 'USER_ENTERED',
-    requestBody: {
-      values: [values]
-    }
+    requestBody: { values: [values] }
   });
 }
 
-/**
- * Find row number by a column value
- */
 async function findRowNumber(sheetName, columnIndex, value) {
   const sheets = getSheetsClient();
   const response = await sheets.spreadsheets.values.get({
@@ -138,7 +120,7 @@ async function getBookings() {
     email: b.email,
     amount: Number(b.amount) || 0,
     paymentScreenshot: b.payment_screenshot || '',
-    paymentMethod: b.payment_method || 'Not Specified', // Added payment method
+    paymentMethod: b.payment_method || 'Not Specified',
     status: b.status || 'pending',
     createdAt: b.created_at,
     notes: b.notes || '',
@@ -150,10 +132,7 @@ async function getBookingsByDateAndCourt(courtId, date) {
   const bookings = await getBookings();
   const cleanCourtId = String(courtId || '').trim();
   const cleanDate = String(date || '').trim();
-  
-  return bookings.filter(
-    b => b.courtId === cleanCourtId && b.date === cleanDate && b.status !== 'rejected'
-  );
+  return bookings.filter(b => b.courtId === cleanCourtId && b.date === cleanDate && b.status !== 'rejected');
 }
 
 async function createBooking(booking) {
@@ -176,7 +155,7 @@ async function createBooking(booking) {
     createdAt,
     booking.notes || '',
     booking.qrCode || '',
-    booking.paymentMethod || 'Not Specified' // Saving Payment Method in Column P
+    booking.paymentMethod || 'Not Specified'
   ]);
 
   return { id: booking.bookingId, ...booking, status: 'pending', createdAt };
@@ -189,12 +168,12 @@ async function updateBookingStatus(bookingId, status, notes = '') {
   const sheets = getSheetsClient();
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
-    range: getRange(SHEETS.BOOKINGS, `A${rowNum}:P${rowNum}`) // Extended to P
+    range: getRange(SHEETS.BOOKINGS, `A${rowNum}:P${rowNum}`)
   });
 
   const row = response.data.values[0];
-  row[11] = status; // status column (L = index 11)
-  if (notes) row[13] = notes; // notes column (N = index 13)
+  row[11] = status; 
+  if (notes) row[13] = notes;
 
   await updateRow(SHEETS.BOOKINGS, rowNum, row);
   
@@ -202,9 +181,9 @@ async function updateBookingStatus(bookingId, status, notes = '') {
     await appendRow(SHEETS.PAYMENTS, [
       `PAY-${Date.now()}`,
       bookingId,
-      row[6], // Customer Name
-      row[9], // Amount
-      row[15] || 'Online / Transfer', // Payment Method (Column P = index 15)
+      row[6], 
+      row[9], 
+      row[15] || 'Online / Transfer', 
       'Received',
       new Date().toISOString()
     ]);
@@ -233,7 +212,43 @@ async function upsertCustomer({ name, mobile, email }) {
 async function createWalkIn(walkIn) {
   const id = `WI-${Date.now()}`;
   const createdAt = new Date().toISOString();
-  
-  await appendRow(SHEETS.WALK_INS, [
-    id, walkIn.customerName, walkIn.mobile, walkIn.courtName,
-    walkIn.date, walkIn.time, walkIn.amount, 'Completed'
+  await appendRow(SHEETS.WALK_INS, [id, walkIn.customerName, walkIn.mobile, walkIn.courtName, walkIn.date, walkIn.time, walkIn.amount, 'Completed']);
+  await appendRow(SHEETS.PAYMENTS, [`PAY-${Date.now()}`, id, walkIn.customerName, walkIn.amount, 'Cash', 'Received', createdAt]);
+  return { id, ...walkIn, status: 'Completed' };
+}
+
+// ========== CONTACT ==========
+async function createContactMessage({ name, email, message }) {
+  const id = `MSG-${Date.now()}`;
+  const createdAt = new Date().toISOString();
+  await appendRow(SHEETS.CONTACT, [id, name, email, message, createdAt]);
+  return { id, name, email, message, createdAt };
+}
+
+// ========== REPORTS ==========
+async function getDashboardStats() {
+  const bookings = await getBookings();
+  const payments = await getSheetData(SHEETS.PAYMENTS);
+  return {
+    totalBookings: bookings.length,
+    pendingBookings: bookings.filter(b => b.status === 'pending').length,
+    approvedBookings: bookings.filter(b => b.status === 'approved').length,
+    totalRevenue: payments.filter(p => p.status && p.status.toLowerCase() === 'received').reduce((sum, p) => sum + (Number(p.amount) || 0), 0)
+  };
+}
+
+// ========== SETTINGS ==========
+async function getSettings() {
+  const data = await getSheetData(SHEETS.SETTINGS);
+  const settings = {};
+  data.forEach(row => {
+    if (row.key) settings[row.key] = row.value;
+  });
+  return settings;
+}
+
+module.exports = {
+  SHEETS, getCourts, getCourtById, getBookings, getBookingsByDateAndCourt,
+  createBooking, updateBookingStatus, findCustomerByMobile, upsertCustomer,
+  getSettings, getSheetData, appendRow, createWalkIn, createContactMessage, getDashboardStats
+};

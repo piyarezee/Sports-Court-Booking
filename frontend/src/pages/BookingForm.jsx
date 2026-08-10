@@ -2,6 +2,9 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { getCourt, createBooking } from '../services/api'
 import { courts as mockCourts } from '../data/mockData'
+import axios from 'axios'
+
+const API = import.meta.env.VITE_API_URL || '/api'
 
 export default function BookingForm() {
   const [searchParams] = useSearchParams()
@@ -14,7 +17,8 @@ export default function BookingForm() {
   const duration = parseInt(searchParams.get('duration') || '1')
 
   const [court, setCourt] = useState(null)
-  const [form, setForm] = useState({ name: '', mobile: '', email: '' })
+  const [settings, setSettings] = useState(null)
+  const [form, setForm] = useState({ name: '', mobile: '', email: '', paymentMethod: 'JazzCash' })
   const [paymentFile, setPaymentFile] = useState(null)
   const [preview, setPreview] = useState(null)
   const [errors, setErrors] = useState({})
@@ -36,6 +40,8 @@ export default function BookingForm() {
       try {
         const data = await getCourt(courtId)
         setCourt(data)
+        const settingsRes = await axios.get(`${API}/settings`)
+        setSettings(settingsRes.data.data)
       } catch {
         setCourt(mockCourts.find(c => c.id === courtId) || null)
       }
@@ -43,13 +49,8 @@ export default function BookingForm() {
     if (courtId) load()
   }, [courtId])
 
-  if (!courtId || !date || !slotStart) {
-    return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Invalid booking data</div>
-  }
-
-  if (!court) {
-    return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Loading...</div>
-  }
+  if (!courtId || !date || !slotStart) return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Invalid booking data</div>
+  if (!court) return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Loading...</div>
 
   const formattedDate = new Date(date).toLocaleDateString('en-PK', { weekday: 'short', day: 'numeric', month: 'short' })
   const minutes = Math.floor(timeLeft / 60);
@@ -97,6 +98,7 @@ export default function BookingForm() {
       formData.append('customerName', form.name)
       formData.append('mobile', form.mobile)
       formData.append('email', form.email)
+      formData.append('paymentMethod', form.paymentMethod)
       formData.append('paymentScreenshot', paymentFile)
 
       const result = await createBooking(formData)
@@ -114,6 +116,15 @@ export default function BookingForm() {
       setSubmitting(false)
     }
   }
+
+  const getPaymentDetails = () => {
+    if (form.paymentMethod === 'Bank Transfer') return { title: settings?.bankTitle, account: settings?.bankAccount }
+    if (form.paymentMethod === 'JazzCash') return { title: settings?.jazzcashTitle, account: settings?.jazzcashAccount }
+    if (form.paymentMethod === 'Easypaisa') return { title: settings?.easypaisaTitle, account: settings?.easypaisaAccount }
+    return { title: '', account: '' }
+  }
+
+  const currentPayment = getPaymentDetails()
 
   return (
     <div className="min-h-screen bg-slate-900 text-white relative overflow-hidden pb-28">
@@ -146,6 +157,43 @@ export default function BookingForm() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {errors.form && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/30 px-3 py-2 rounded-lg">{errors.form}</p>}
 
+          {/* Payment Method Section */}
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-lg space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">Select Payment Method</label>
+              <div className="grid grid-cols-3 gap-2">
+                {['Bank Transfer', 'JazzCash', 'Easypaisa'].map(method => (
+                  <button
+                    key={method}
+                    type="button"
+                    onClick={() => setForm(prev => ({ ...prev, paymentMethod: method }))}
+                    className={`py-2 rounded-xl text-xs font-bold transition-all ${
+                      form.paymentMethod === method 
+                        ? 'bg-primary-500 text-white shadow-md' 
+                        : 'bg-white/5 border border-white/10 text-slate-400 hover:bg-white/10'
+                    }`}
+                  >
+                    {method}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {settings && (
+              <div className="bg-slate-900/50 rounded-xl p-4 border border-white/5">
+                <p className="text-xs text-slate-400 mb-1">Account Title</p>
+                <p className="font-semibold text-white text-sm mb-3">{currentPayment.title || 'Loading...'}</p>
+                <p className="text-xs text-slate-400 mb-1">Account Number</p>
+                <div className="flex justify-between items-center">
+                  <p className="font-mono font-bold text-primary-300 text-lg tracking-wider">{currentPayment.account || 'Loading...'}</p>
+                  {currentPayment.account && (
+                    <button type="button" onClick={() => navigator.clipboard.writeText(currentPayment.account)} className="text-xs bg-white/10 px-2 py-1 rounded hover:bg-white/20">Copy</button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-1.5">Full Name</label>
             <input type="text" name="name" value={form.name} onChange={handleChange} placeholder="Enter your full name" className={`w-full bg-white/5 border ${errors.name ? 'border-red-500' : 'border-white/10'} rounded-xl py-3 px-4 text-white placeholder-slate-500 focus:outline-none focus:border-primary-500`} />
@@ -166,7 +214,7 @@ export default function BookingForm() {
 
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-1.5">Payment Screenshot</label>
-            <p className="text-xs text-slate-500 mb-2">Transfer Rs. {court.pricePerHour * duration} and upload screenshot</p>
+            <p className="text-xs text-slate-500 mb-2">Transfer Rs. {court.pricePerHour * duration} via {form.paymentMethod} and upload screenshot</p>
             {!preview ? (
               <label className={`flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-xl cursor-pointer transition hover:bg-white/5 ${errors.payment ? 'border-red-500' : 'border-white/20'}`}>
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-slate-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>

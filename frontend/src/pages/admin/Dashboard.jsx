@@ -98,7 +98,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Navigation Cards (7 Buttons) */}
+        {/* Navigation Cards (8 Buttons) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-8">
           <Link
             to="/admin/bookings"
@@ -164,6 +164,18 @@ export default function AdminDashboard() {
               <p className="text-sm text-slate-300 mt-0.5">Monitoring & Reports</p>
             </div>
             <span className="text-2xl">📈</span>
+          </Link>
+
+          {/* NEW: Send Announcement Button */}
+          <Link
+            to="/admin/announcements"
+            className="bg-purple-600 hover:bg-purple-700 text-white rounded-2xl p-5 flex items-center justify-between transition"
+          >
+            <div>
+              <p className="font-semibold">Send Announcement</p>
+              <p className="text-sm text-purple-100 mt-0.5">Notify all users</p>
+            </div>
+            <span className="text-2xl">📢</span>
           </Link>
 
           <Link

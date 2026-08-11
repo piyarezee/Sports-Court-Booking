@@ -1,6 +1,6 @@
 const express = require('express');
 const sheetsService = require('../services/sheetsService');
-const emailService = require('../services/emailService');
+// const emailService = require('../services/emailService'); // Email disabled
 
 const router = express.Router();
 
@@ -8,22 +8,13 @@ const router = express.Router();
 const staffAuth = (req, res, next) => {
   const authHeader = req.header('Authorization');
   if (!authHeader) return res.status(401).json({ error: 'No token provided' });
-  
   const token = authHeader.replace('Bearer ', '');
   const decoded = Buffer.from(token, 'base64').toString('utf8');
   const [role, password] = decoded.split(':');
-  
   const staffPassword = process.env.STAFF_PASSWORD || 'staff123';
-  if (role === 'staff' && password === staffPassword) {
-    next();
-  } else {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  if (role === 'staff' && password === staffPassword) next();
+  else return res.status(401).json({ error: 'Unauthorized' });
 };
-
-// ==========================================
-// PUBLIC & STAFF ROUTES (No Admin Auth)
-// ==========================================
 
 // POST /api/admin/login
 router.post('/login', (req, res) => {
@@ -64,17 +55,12 @@ router.get('/staff/today-bookings', staffAuth, async (req, res) => {
 const adminAuth = require('../middleware/adminAuth');
 router.use(adminAuth);
 
-// ==========================================
-// PROTECTED ADMIN ROUTES
-// ==========================================
-
 // GET /api/admin/dashboard
 router.get('/dashboard', async (req, res) => {
   try {
     const stats = await sheetsService.getDashboardStats();
     const bookings = await sheetsService.getBookings();
     const courts = await sheetsService.getCourts();
-
     res.json({
       success: true,
       data: {
@@ -97,9 +83,7 @@ router.get('/bookings', async (req, res) => {
   try {
     const { status } = req.query;
     let bookings = await sheetsService.getBookings();
-    if (status && status !== 'all') {
-      bookings = bookings.filter(b => b.status === status);
-    }
+    if (status && status !== 'all') bookings = bookings.filter(b => b.status === status);
     bookings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     res.json({ success: true, data: bookings });
   } catch (err) {
@@ -120,19 +104,18 @@ router.patch('/bookings/:id/status', async (req, res) => {
     const updated = await sheetsService.updateBookingStatus(id, status, notes || '');
     res.json({ success: true, message: `Booking ${status}`, data: updated });
 
+    // Email disabled, using WhatsApp instead
+    /*
     const allBookings = await sheetsService.getBookings();
     const booking = allBookings.find(b => b.id === id);
     if (booking) {
       try {
-        await emailService.sendBookingStatusEmail({
-          to: booking.email, name: booking.customerName, courtName: booking.courtName,
-          date: booking.date, slot: `${booking.slotStart} - ${booking.slotEnd}`,
-          status, bookingId: id, notes: notes || ''
-        });
+        await emailService.sendBookingStatusEmail({ ... });
       } catch (emailErr) {
         console.error('Status email failed:', emailErr.message);
       }
     }
+    */
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: err.message });
@@ -198,36 +181,13 @@ router.get('/contact', async (req, res) => {
   }
 });
 
-// GET /api/admin/settings
-router.get('/settings', async (req, res) => {
-  try {
-    const settings = await sheetsService.getSettings();
-    res.json({ success: true, data: settings });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// ==========================================
-// REPORTING & MONITORING ROUTE
-// ==========================================
-
 // GET /api/admin/system-status
 router.get('/system-status', async (req, res) => {
   try {
     let sheetsStatus = { status: 'Operational', message: 'Connected' };
     let driveStatus = { status: 'Operational', message: 'Connected' };
-    
-    try {
-      await sheetsService.getSheetData(sheetsService.SHEETS.COURTS);
-    } catch (err) {
-      sheetsStatus = { status: 'Error', message: 'Auth failed or API down' };
-      driveStatus = { status: 'Error', message: 'Auth failed (Shared with Sheets)' };
-    }
-
+    try { await sheetsService.getSheetData(sheetsService.SHEETS.COURTS); } catch (err) { sheetsStatus = { status: 'Error', message: 'Auth failed' }; driveStatus = { status: 'Error', message: 'Auth failed' }; }
     const stats = await sheetsService.getDashboardStats();
-
     res.json({
       success: true,
       data: {
@@ -235,7 +195,7 @@ router.get('/system-status', async (req, res) => {
         googleSheets: sheetsStatus,
         googleDrive: driveStatus,
         whatsapp: { status: 'Operational', message: 'Click-to-chat links active' },
-        emailService: { status: 'Configured', message: 'API/Gmail setup ready' },
+        emailService: { status: 'Disabled', message: 'Using WhatsApp instead' },
         pendingApprovals: stats.pendingBookings,
         totalRevenue: stats.totalRevenue,
         totalBookings: stats.totalBookings

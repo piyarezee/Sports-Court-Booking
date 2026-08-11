@@ -4,7 +4,7 @@ const path = require('path');
 const QRCode = require('qrcode');
 const sheetsService = require('../services/sheetsService');
 const driveService = require('../services/driveService');
-const emailService = require('../services/emailService');
+// const emailService = require('../services/emailService'); // Email disabled
 
 const router = express.Router();
 
@@ -65,15 +65,14 @@ router.post('/', upload.single('paymentScreenshot'), async (req, res) => {
 
     res.status(201).json({ success: true, message: 'Booking submitted successfully.', data: booking });
 
+    // Email disabled to prevent UI hang. We use WhatsApp instead.
+    /*
     try {
-      await emailService.sendBookingSubmittedEmail({
-        to: email, name: customerName, courtName: court.name, date,
-        slot: `${slotStart} - ${finalSlotEnd}`, amount: court.pricePerHour,
-        bookingId: bookingId, qrCode: qrCodeDataUrl
-      });
+      await emailService.sendBookingSubmittedEmail({ ... });
     } catch (emailErr) {
       console.error('Background Email send failed:', emailErr.message);
     }
+    */
 
   } catch (err) {
     console.error('Create booking error:', err);

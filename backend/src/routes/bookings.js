@@ -8,11 +8,8 @@ const emailService = require('../services/emailService');
 
 const router = express.Router();
 
-// Multer config
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../../uploads'));
-  },
+  destination: (req, file, cb) => cb(null, path.join(__dirname, '../../uploads')),
   filename: (req, file, cb) => {
     const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
     cb(null, unique + path.extname(file.originalname));
@@ -23,53 +20,31 @@ const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'));
-    }
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Only image files are allowed'));
   }
 });
 
-// POST /api/bookings - Create new booking
 router.post('/', upload.single('paymentScreenshot'), async (req, res) => {
   try {
-    const { courtId, date, slotStart, slotEnd, customerName, mobile, email } = req.body;
+    const { courtId, date, slotStart, slotEnd, customerName, mobile, email, paymentMethod } = req.body;
 
     if (!courtId || !date || !slotStart || !customerName || !mobile || !email) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing required fields'
-      });
+      return res.status(400).json({ success: false, error: 'Missing required fields' });
     }
-
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        error: 'Payment screenshot is required'
-      });
-    }
+    if (!req.file) return res.status(400).json({ success: false, error: 'Payment screenshot is required' });
 
     const court = await sheetsService.getCourtById(courtId);
-    if (!court) {
-      return res.status(404).json({ success: false, error: 'Court not found' });
-    }
+    if (!court) return res.status(404).json({ success: false, error: 'Court not found' });
 
-    // Check if slot already booked
     const existing = await sheetsService.getBookingsByDateAndCourt(courtId, date);
     if (existing.some(b => b.slotStart === slotStart)) {
-      return res.status(409).json({
-        success: false,
-        error: 'This slot is already booked'
-      });
+      return res.status(409).json({ success: false, error: 'This slot is already booked' });
     }
 
     let paymentUrl = '';
     try {
-      const uploaded = await driveService.uploadFile(
-        req.file.path,
-        `payment-${mobile}-${Date.now()}${path.extname(req.file.originalname)}`
-      );
+      const uploaded = await driveService.uploadFile(req.file.path, `payment-${mobile}-${Date.now()}${path.extname(req.file.originalname)}`);
       paymentUrl = uploaded.webContentLink || uploaded.webViewLink;
     } catch (driveErr) {
       console.error('Drive upload failed, using local path:', driveErr.message);
@@ -78,48 +53,23 @@ router.post('/', upload.single('paymentScreenshot'), async (req, res) => {
 
     const bookingId = `SCB-${Date.now()}`;
     const qrCodeDataUrl = await QRCode.toDataURL(bookingId, { width: 200 });
-
     const finalSlotEnd = slotEnd || `${String(Number(slotStart.split(':')[0]) + 1).padStart(2, '0')}:00`;
 
-    await sheetsService.upsertCustomer({
-      name: customerName,
-      mobile: mobile.replace(/[\s-]/g, ''),
-      email
-    });
+    await sheetsService.upsertCustomer({ name: customerName, mobile: mobile.replace(/[\s-]/g, ''), email });
 
     const booking = await sheetsService.createBooking({
-      bookingId,
-      qrCode: qrCodeDataUrl,
-      courtId,
-      courtName: court.name,
-      date,
-      slotStart,
-      slotEnd: finalSlotEnd,
-      customerName,
-      mobile: mobile.replace(/[\s-]/g, ''),
-      email,
-      amount: court.pricePerHour,
-      paymentScreenshot: paymentUrl
+      bookingId, qrCode: qrCodeDataUrl, courtId, courtName: court.name, date,
+      slotStart, slotEnd: finalSlotEnd, customerName, mobile: mobile.replace(/[\s-]/g, ''),
+      email, amount: court.pricePerHour, paymentScreenshot: paymentUrl, paymentMethod
     });
 
-    // 1. Turant Frontend ko Success bhej do (taaki QR code dikh jaye)
-    res.status(201).json({
-      success: true,
-      message: 'Booking submitted successfully. Pending admin approval.',
-      data: booking
-    });
+    res.status(201).json({ success: true, message: 'Booking submitted successfully.', data: booking });
 
-    // 2. Ab background mein Email bhejo (Agar fail ho, toh user ko pata bhi nahi chalega)
     try {
       await emailService.sendBookingSubmittedEmail({
-        to: email,
-        name: customerName,
-        courtName: court.name,
-        date,
-        slot: `${slotStart} - ${finalSlotEnd}`,
-        amount: court.pricePerHour,
-        bookingId: bookingId,
-        qrCode: qrCodeDataUrl
+        to: email, name: customerName, courtName: court.name, date,
+        slot: `${slotStart} - ${finalSlotEnd}`, amount: court.pricePerHour,
+        bookingId: bookingId, qrCode: qrCodeDataUrl
       });
     } catch (emailErr) {
       console.error('Background Email send failed:', emailErr.message);
@@ -131,7 +81,6 @@ router.post('/', upload.single('paymentScreenshot'), async (req, res) => {
   }
 });
 
-// GET /api/bookings
 router.get('/', async (req, res) => {
   try {
     const bookings = await sheetsService.getBookings();

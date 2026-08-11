@@ -101,6 +101,9 @@ export default function BookingForm() {
       formData.append('paymentMethod', form.paymentMethod)
       formData.append('paymentScreenshot', paymentFile)
 
+      // User ka mobile local storage mein save karo notifications ke liye
+      localStorage.setItem('userMobile', form.mobile);
+
       const result = await createBooking(formData)
       navigate('/success', {
         state: {

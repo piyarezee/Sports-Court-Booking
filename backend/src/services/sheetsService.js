@@ -163,13 +163,15 @@ async function updateBookingStatus(bookingId, status, notes = '') {
   
   if (status === 'approved') {
     await appendRow(SHEETS.PAYMENTS, [
-      `PAY-${Date.now()}`,
-      bookingId,
-      row[6], 
-      row[9], 
-      row[15] || 'Online / Transfer', 
-      'Received',
-      new Date().toISOString()
+      `PAY-${Date.now()}`, bookingId, row[6], row[9], row[15] || 'Online / Transfer', 'Received', new Date().toISOString()
+    ]);
+
+    // Send In-App Notification to User
+    const userMobile = row[7]; // Column H
+    const courtName = row[2]; // Column C
+    const id = `NOTIF-${Date.now()}`;
+    await appendRow('Notifications', [
+      id, userMobile, 'Booking Confirmed ✅', `Your booking for ${courtName} has been approved! See you at the court.`, new Date().toISOString()
     ]);
   }
   return { id: bookingId, status, notes };

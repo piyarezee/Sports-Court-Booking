@@ -2,10 +2,17 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getCourts } from '../services/api'
 import { courts as mockCourts } from '../data/mockData'
+import axios from 'axios'
+
+const API = import.meta.env.VITE_API_URL || '/api'
 
 export default function Home() {
   const [courts, setCourts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [notifs, setNotifs] = useState([])
+  const [showNotifs, setShowNotifs] = useState(false)
+
+  const userMobile = localStorage.getItem('userMobile') || 'unknown'
 
   useEffect(() => {
     async function load() {
@@ -22,7 +29,20 @@ export default function Home() {
       }
     }
     load()
-  }, [])
+
+    const fetchNotifs = async () => {
+      try {
+        const res = await axios.get(`${API}/notifications/${userMobile}`)
+        if (res.data?.success) setNotifs(res.data.data)
+      } catch (e) {}
+    }
+    fetchNotifs()
+    const interval = setInterval(fetchNotifs, 30000)
+    return () => clearInterval(interval)
+
+  }, [userMobile])
+
+  const unreadCount = notifs.length
 
   return (
     <div className="min-h-screen bg-slate-900 text-white relative overflow-hidden">
@@ -30,17 +50,41 @@ export default function Home() {
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-600/20 rounded-full filter blur-[120px]"></div>
 
       <div className="relative z-10 w-full max-w-lg mx-auto px-4 py-6 pb-10">
-        <header className="bg-white/5 backdrop-blur-xl border border-white/10 p-5 sticky top-4 z-20 rounded-2xl shadow-lg mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-extrabold tracking-tight leading-tight text-white">Athletic Center SAC</h1>
-              <p className="text-primary-300 text-sm font-medium">DHA | MAIN</p>
-            </div>
-            <div className="bg-white/10 p-2.5 rounded-xl backdrop-blur-sm border border-white/10">
-              <svg className="w-6 h-6 text-primary-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
+        
+        <header className="bg-white/5 backdrop-blur-xl border border-white/10 p-5 sticky top-4 z-20 rounded-2xl shadow-lg mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-extrabold tracking-tight leading-tight text-white">Athletic Center SAC</h1>
+            <p className="text-primary-300 text-sm font-medium">DHA | MAIN</p>
+          </div>
+          
+          <div className="relative">
+            <button onClick={() => setShowNotifs(!showNotifs)} className="bg-white/10 p-2.5 rounded-xl backdrop-blur-sm border border-white/10 relative">
+              <svg className="w-6 h-6 text-primary-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            {showNotifs && (
+              <div className="absolute right-0 mt-2 w-72 bg-slate-800 border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50">
+                <div className="p-3 border-b border-white/10 font-semibold text-sm">Notifications</div>
+                <div className="max-h-60 overflow-y-auto">
+                  {notifs.length === 0 ? (
+                    <p className="p-4 text-center text-slate-500 text-sm">No new notifications</p>
+                  ) : (
+                    notifs.map((n, i) => (
+                      <div key={i} className="p-3 border-b border-white/5 hover:bg-white/5">
+                        <p className="font-semibold text-sm text-white">{n.title}</p>
+                        <p className="text-xs text-slate-400 mt-1">{n.message}</p>
+                        <p className="text-[10px] text-slate-600 mt-1">{new Date(n.date).toLocaleString()}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </header>
 

@@ -26,16 +26,12 @@ async function getSheetData(sheetName) {
     spreadsheetId: SPREADSHEET_ID,
     range: getRange(sheetName)
   });
-
   const rows = response.data.values || [];
   if (rows.length === 0) return [];
-
   const headers = rows[0].map(h => h.trim().toLowerCase().replace(/\s+/g, '_'));
   return rows.slice(1).map(row => {
     const obj = {};
-    headers.forEach((header, i) => {
-      obj[header] = row[i] || '';
-    });
+    headers.forEach((header, i) => { obj[header] = row[i] || ''; });
     return obj;
   });
 }
@@ -67,35 +63,29 @@ async function findRowNumber(sheetName, columnIndex, value) {
     spreadsheetId: SPREADSHEET_ID,
     range: getRange(sheetName)
   });
-
   const rows = response.data.values || [];
   for (let i = 1; i < rows.length; i++) {
-    if ((rows[i][columnIndex] || '').toString() === value.toString()) {
-      return i + 1; 
-    }
+    if ((rows[i][columnIndex] || '').toString() === value.toString()) return i + 1;
   }
   return null;
 }
 
-// ========== COURTS ==========
 async function getCourts() {
   const data = await getSheetData(SHEETS.COURTS);
-  return data
-    .map(c => ({
-      id: String(c.id || '').trim(),
-      name: c.name,
-      type: c.type,
-      location: c.location,
-      pricePerHour: Number(c.price_per_hour) || 0,
-      image: c.image || '',
-      description: c.description || '',
-      amenities: c.amenities ? c.amenities.split(',').map(a => a.trim()) : [],
-      youtubeUrl: c.youtube_url || '',
-      gallery: c.gallery || '',
-      mapUrl: c.map_url || '',
-      isActive: String(c.is_active || '').toLowerCase() !== 'false' && String(c.is_active || '') !== '0'
-    }))
-    .filter(c => c.id && c.isActive);
+  return data.map(c => ({
+    id: String(c.id || '').trim(),
+    name: c.name,
+    type: c.type,
+    location: c.location,
+    pricePerHour: Number(c.price_per_hour) || 0,
+    image: c.image || '',
+    description: c.description || '',
+    amenities: c.amenities ? c.amenities.split(',').map(a => a.trim()) : [],
+    youtubeUrl: c.youtube_url || '',
+    gallery: c.gallery || '',
+    mapUrl: c.map_url || '',
+    isActive: String(c.is_active || '').toLowerCase() !== 'false' && String(c.is_active || '') !== '0'
+  })).filter(c => c.id && c.isActive);
 }
 
 async function getCourtById(id) {
@@ -104,7 +94,6 @@ async function getCourtById(id) {
   return courts.find(c => c.id === cleanId) || null;
 }
 
-// ========== BOOKINGS ==========
 async function getBookings() {
   const data = await getSheetData(SHEETS.BOOKINGS);
   return data.map(b => ({
@@ -138,7 +127,6 @@ async function getBookingsByDateAndCourt(courtId, date) {
 async function createBooking(booking) {
   const internalId = `BK${Date.now()}`;
   const createdAt = new Date().toISOString();
-
   await appendRow(SHEETS.BOOKINGS, [
     booking.bookingId,
     booking.courtId,
@@ -157,24 +145,20 @@ async function createBooking(booking) {
     booking.qrCode || '',
     booking.paymentMethod || 'Not Specified'
   ]);
-
   return { id: booking.bookingId, ...booking, status: 'pending', createdAt };
 }
 
 async function updateBookingStatus(bookingId, status, notes = '') {
   const rowNum = await findRowNumber(SHEETS.BOOKINGS, 0, bookingId);
   if (!rowNum) throw new Error('Booking not found');
-
   const sheets = getSheetsClient();
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
     range: getRange(SHEETS.BOOKINGS, `A${rowNum}:P${rowNum}`)
   });
-
   const row = response.data.values[0];
   row[11] = status; 
   if (notes) row[13] = notes;
-
   await updateRow(SHEETS.BOOKINGS, rowNum, row);
   
   if (status === 'approved') {
@@ -188,11 +172,9 @@ async function updateBookingStatus(bookingId, status, notes = '') {
       new Date().toISOString()
     ]);
   }
-
   return { id: bookingId, status, notes };
 }
 
-// ========== CUSTOMERS ==========
 async function findCustomerByMobile(mobile) {
   const data = await getSheetData(SHEETS.CUSTOMERS);
   return data.find(c => c.mobile === mobile) || null;
@@ -201,14 +183,12 @@ async function findCustomerByMobile(mobile) {
 async function upsertCustomer({ name, mobile, email }) {
   const existing = await findCustomerByMobile(mobile);
   if (existing) return existing;
-
   const id = `CU${Date.now()}`;
   const createdAt = new Date().toISOString();
   await appendRow(SHEETS.CUSTOMERS, [id, name, mobile, email, createdAt]);
   return { id, name, mobile, email, created_at: createdAt };
 }
 
-// ========== WALK-INS ==========
 async function createWalkIn(walkIn) {
   const id = `WI-${Date.now()}`;
   const createdAt = new Date().toISOString();
@@ -217,7 +197,6 @@ async function createWalkIn(walkIn) {
   return { id, ...walkIn, status: 'Completed' };
 }
 
-// ========== CONTACT ==========
 async function createContactMessage({ name, email, message }) {
   const id = `MSG-${Date.now()}`;
   const createdAt = new Date().toISOString();
@@ -225,7 +204,6 @@ async function createContactMessage({ name, email, message }) {
   return { id, name, email, message, createdAt };
 }
 
-// ========== REPORTS ==========
 async function getDashboardStats() {
   const bookings = await getBookings();
   const payments = await getSheetData(SHEETS.PAYMENTS);
@@ -237,13 +215,10 @@ async function getDashboardStats() {
   };
 }
 
-// ========== SETTINGS ==========
 async function getSettings() {
   const data = await getSheetData(SHEETS.SETTINGS);
   const settings = {};
-  data.forEach(row => {
-    if (row.key) settings[row.key] = row.value;
-  });
+  data.forEach(row => { if (row.key) settings[row.key] = row.value; });
   return settings;
 }
 
